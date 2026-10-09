@@ -42,13 +42,25 @@ hooks/register.ts            the module: one on() per event
 
 ## What is logged
 
-`session.start`, `session.end`, `turn.start`, `turn.complete`, `prompt.submit`, `prompt.compose`, `command.run`, `tool.call`, `tool.check`, `session.compact`.
+Every event `claude plugin validate` can register a plain hook for, grouped as the [reference](https://code.claude.com/docs/en/plugins/mods/reference#events) groups them:
+
+- **Session:** `session.start`, `session.end`, `session.compact`, `session.receive`, `session.send`, `session.append`, `session.attach`, `session.detach`, `session.measure`
+- **Turns:** `turn.start`, `turn.complete`
+- **Prompts:** `prompt.submit`, `prompt.compose`, `prompt.section`, `prompt.context`, `prompt.attachment`, `prompt.mention`, `skill.prompt`, `attribution.text`
+- **Commands and configuration:** `command.run`, `command.describe`, `config.set`, `config.describe`
+- **Tools:** `tool.call`, `tool.check`, `tool.describe`
+- **Subagents:** `agent.offer`, `agent.spawn`
+- **Interface:** `ui.resolve`, `ui.press`, `ui.input`, `ui.select`, `ui.focus`, `ui.scroll`, `ui.close`, `ui.message`, `ui.fault`
+- **Other mods:** `plugin.register`
+- **Settings hooks:** `classic.*`, a wildcard that matches every settings-hook event (`Stop`, `PreToolUse`, `SessionStart`, ...) in one handler. `e` carries the same stdin JSON a settings hook would read, including `hook_event_name`, so the logged line still says which one fired.
 
 Left out on purpose:
 
 - `turn.step` and `process.spawn` are streams. Subscribing to them needs an async generator hook, not a plain one.
-- `telemetry.*` is high volume and only useful for telemetry work.
+- `telemetry.log` and `telemetry.mark` are high volume, and a mod we install must filter them with `{ to: 'collector' }` or the validator rejects the module.
 - `ui.render` fires on every redraw and would bury everything else.
+- `prompt.edit`, `prompt.fill`, and `prompt.suggest` fire on the keystroke path (the prompt box as the user types), so they'd flood the log the same way `ui.render` would.
+- `engine.create` fires while `$` itself is still being built for this mod, so `$.ui.status` and `$.fs` aren't there yet. A hook on it threw `undefined is not an object` — see [LEARNINGS.md](LEARNINGS.md).
 
 To log more, add an `on('<event>', ...)` block. Add it by name: the validator rejects anything else.
 

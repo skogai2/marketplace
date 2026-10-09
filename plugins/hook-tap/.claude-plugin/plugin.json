@@ -1,7 +1,7 @@
 {
   "name": "hook-tap",
-  "version": "0.2.0",
-  "description": "Shows the current hook stage in the status line and appends each event's input to log.jsonl, for learning how hooks fire.",
+  "version": "0.3.0",
+  "description": "Shows the current hook stage in the status line and appends every loggable Claude Code event's input to log.jsonl, for learning how hooks fire.",
   "author": {
     "name": "Emil Skogsund"
   }

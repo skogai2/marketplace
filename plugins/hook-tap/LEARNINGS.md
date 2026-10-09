@@ -47,3 +47,13 @@ From `types/claude-code.d.ts` (`fs` section):
 
 - **Interactive run not yet observed.** The status line and hot reload need a real terminal. Next step: `claude --plugin-dir ~/skogai-fleet/plugins/hook-tap` from the repo root, send a prompt that runs Bash, and check the status line and `log.jsonl`.
 - **`claude plugin test`** needs a `*.test.ts` file. Not written yet; the test kit's API is in `reference.md` under "Developing one".
+
+## Filling in the rest of the events (build 2.1.295)
+
+Expanded from 10 events to every plain (non-generator) event the validator will register, plus `classic.*`. Checked against `docs/plugins/mods/reference.md` in this repo, then confirmed with `claude plugin validate` and a headless run (`claude -p "run ls" --plugin-dir ...`).
+
+- **`engine.create` can't be hooked the same way as the rest.** It fires while `$` is still being assembled for this mod, so `$.ui.status(...)` inside it threw `undefined is not an object (evaluating '$.ui.status')` and the whole module failed to load with `hooks module did not load: engine.create failed`. One bad hook keeps every hook in the module from registering, not just the one that threw. Dropped it; logging it would need a path that doesn't touch `$.ui` or `$.fs`.
+- **`classic.*` works as a literal wildcard.** `on('classic.*', ...)` matched real settings-hook firings (`SessionStart`, `UserPromptSubmit`, `Stop`, ...) in the headless run, each landing as one `"classic.*"` line. `e` is the same stdin JSON a settings hook reads, with `hook_event_name` saying which one it was.
+- **Everything else loaded and fired with the same four-line pattern** (`$.ui.status`, read-if-exists, append, `return next(e)`) as the original ten events — no event needed a different return shape just to observe-and-pass-through.
+- **High-frequency groups exist beyond the three already known.** `command.describe`, `prompt.section`, `tool.describe`, and `agent.offer` each fired many times in a single turn (once per command/section/tool/subagent-type on offer) but stayed bounded — unlike `ui.render` or the keystroke-path prompt events, they don't need excluding, just expect a burst.
+- **`prompt.edit`, `prompt.fill`, `prompt.suggest` were excluded without testing them**, by inference from their one-line descriptions (prompt-box-as-you-type) and `prompt.edit`'s 50ms hook budget in the limits table, which is otherwise only given to hot-path hooks. Worth confirming directly in an interactive session.
