@@ -1,10 +1,10 @@
 {
-  "name": "skogai-fleet",
+  "name": "skogai-marketplace",
   "owner": {
     "name": "Emil Skogsund"
   },
   "metadata": {
-    "description": "SkogAI fleet plugins: hooks and tooling built while learning Claude Code's plugin API."
+    "description": "skogai marketplace"
   },
   "plugins": [
     {
