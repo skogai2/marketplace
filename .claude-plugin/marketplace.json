@@ -11,14 +11,6 @@
       "name": "hook-tap",
       "source": "./plugins/hook-tap",
       "description": "Shows the current hook stage in the status line and appends each event's input to log.jsonl, for learning how hooks fire."
-    },
-    {
-      "name": "open-knowledge-plugin",
-      "source": {
-        "source": "github",
-        "repo": "skogai2/open-knowledge-plugin"
-      },
-      "description": "Author, maintain, backfill, validate, visualize and serve (MCP) Open Knowledge Format (OKF) bundles: portable markdown knowledge for humans and agents."
     }
   ]
 }
