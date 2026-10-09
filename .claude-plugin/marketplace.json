@@ -1,0 +1,16 @@
+{
+  "name": "skogai-fleet",
+  "owner": {
+    "name": "Emil Skogsund"
+  },
+  "metadata": {
+    "description": "SkogAI fleet plugins: hooks and tooling built while learning Claude Code's plugin API."
+  },
+  "plugins": [
+    {
+      "name": "hook-tap",
+      "source": "./plugins/hook-tap",
+      "description": "Shows the current hook stage in the status line and appends each event's input to log.jsonl, for learning how hooks fire."
+    }
+  ]
+}
