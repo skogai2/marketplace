@@ -1,0 +1,229 @@
+agent-teams	Orchestrate teams of Claude Code sessions
+agent-view	Manage multiple agents with agent view
+agents	Run agents in parallel
+artifacts	Share session output as artifacts
+best-practices	Best practices for Claude Code
+changelog	Claude Code changelog
+channels	Push events into a running session with channels
+chrome	Use Claude Code with Chrome
+claude-code-on-the-web	Use Claude Code in the cloud
+claude-directory	Explore the .claude directory
+claude-projects	Let Claude coordinate ongoing work with Projects
+claude-security	Scan your codebase for vulnerabilities
+claude-tag	Claude Tag
+code-review	Code Review
+common-workflows	Common workflows
+computer-use	Let Claude use your computer from the CLI
+context-window	Explore the context window
+cross-session-messaging	Message your other Claude Code sessions
+debug-your-config	Debug your configuration
+deep-links	Launch sessions from links
+desktop	Desktop application
+desktop-ios-simulator	Test iOS apps in the simulator
+desktop-linux	Claude Desktop on Linux (beta)
+desktop-quickstart	Get started with the desktop app
+desktop-scheduled-tasks	Schedule recurring tasks in Claude Code Desktop
+desktop-wsl	Claude Code Desktop in WSL
+errors	Error reference
+features-overview	Extend Claude Code
+github-actions	Claude Code GitHub Actions
+github-actions-cloud-providers	Use Claude Code GitHub Actions with cloud providers
+github-enterprise-server	Claude Code with GitHub Enterprise Server
+gitlab-ci-cd	Claude Code GitLab CI/CD
+goal	Keep Claude working toward a goal
+headless	Run Claude Code programmatically
+hooks-guide	Automate actions with hooks
+how-claude-code-works	How Claude Code works
+jetbrains	JetBrains IDEs
+large-codebases	Set up Claude Code in a monorepo or large codebase
+mcp	Connect Claude Code to tools via MCP
+mcp-quickstart	Connect to MCP servers
+memory	How Claude remembers your project
+mobile	Claude Code on mobile
+overview	Overview
+platforms	Platforms and integrations
+plugin-evals	Test plugins with evals
+plugins/anthropic-marketplaces	Anthropic's marketplaces
+plugins/cli-hints	Recommend your plugin from your CLI
+plugins/code-intelligence	Code intelligence plugins
+plugins/components	Add components to a plugin
+plugins/create	Create a Claude Code plugin
+plugins/create-marketplace	Create a marketplace
+plugins/dependencies	Plugin dependencies
+plugins/host-marketplace	Host and maintain a marketplace
+plugins/install	Install and manage plugins
+plugins/loading	Plugin loading reference
+plugins/measure	Measure plugin cost and usage
+plugins/mods/admin	Manage mods for your organization
+plugins/mods/api	Use the mods API
+plugins/mods/create	Create a mod
+plugins/mods/events	React to events with a mod
+plugins/mods/gallery	Interface gallery for mods
+plugins/mods/interface	Draw in the interface with a mod
+plugins/mods/overview	Mods overview
+plugins/mods/reference	Mods reference
+plugins/mods/test	Test a mod
+plugins/mods/troubleshoot	Troubleshoot a mod
+plugins/org	Manage Claude Code plugins for your organization
+plugins/overview	Plugins overview
+plugins/publish	Publish and distribute a plugin
+plugins/relevance	Recommend plugins for your org
+plugins/security	Plugin security and trust
+plugins/troubleshooting	Troubleshoot plugins
+prompt-caching	How Claude Code uses prompt caching
+prompt-library	Prompt library
+quickstart	Quickstart
+remote-control	Continue local sessions from any device with Remote Control
+routines	Automate work with routines
+scheduled-tasks	Run prompts on a schedule
+security-guidance	Catch security issues as Claude writes code
+sessions	Manage sessions
+skills	Extend Claude with skills
+slack	Claude Code in Slack
+sub-agents	Create custom subagents
+troubleshoot-install	Troubleshoot installation and login
+troubleshooting	Troubleshooting
+ultrareview	Find bugs with ultrareview
+vs-code	Use Claude Code in VS Code
+web-quickstart	Get started with Claude Code in the cloud
+workflows	Orchestrate subagents at scale with dynamic workflows
+worktrees	Run parallel sessions with worktrees
+accessibility	Use Claude Code with a screen reader
+admin-setup	Set up Claude Code for your organization
+advisor	Escalate hard decisions with the advisor tool
+agent-sdk/agent-loop	How the agent loop works
+agent-sdk/claude-code-features	Use Claude Code features in the SDK
+agent-sdk/configuration	Configure your agent
+agent-sdk/examples	Examples
+agent-sdk/migration-guide	Migrate to Claude Agent SDK
+agent-sdk/overview	Agent SDK overview
+agent-sdk/quickstart	Quickstart
+agent-sdk/session-storage	Persist sessions to external storage
+agent-sdk/sessions	Work with sessions
+agent-sdk/troubleshooting	Troubleshoot the Agent SDK
+amazon-bedrock	Claude Code on Amazon Bedrock
+analytics	Track team usage with analytics
+authentication	Authentication
+auto-mode-config	Configure auto mode
+champion-kit	Champion kit
+channels-reference	Channels reference
+checkpointing	Checkpointing
+claude-apps-gateway	Claude apps gateway for Amazon Bedrock, Claude Platform on AWS, Google Cloud, and Microsoft Foundry
+claude-apps-gateway-config	Claude apps gateway configuration
+claude-apps-gateway-deploy	Claude apps gateway deployment and operations
+claude-apps-gateway-on-aws	Deploy Claude apps gateway on AWS
+claude-apps-gateway-on-gcp	Deploy Claude apps gateway on Google Cloud
+claude-apps-gateway-spend-limits	Claude apps gateway spend limits
+claude-platform-on-aws	Claude Code on Claude Platform on AWS
+cli-reference	CLI reference
+cloud-environments	Configure cloud environments
+commands	Commands
+communications-kit	Communications kit
+corporate-launcher	Run Claude Code behind a corporate launcher
+costs	Manage costs effectively
+data-usage	Data usage
+devcontainer	Development containers
+env-vars	Environment variables
+fast-mode	Speed up responses with fast mode
+feature-availability	Feature availability
+fullscreen	Fullscreen rendering
+gateways	Run Claude Code through a gateway
+glossary	Glossary
+google-vertex-ai	Claude Code on Google Cloud's Agent Platform
+hipaa-setup	Set up Claude Code (local mode) for a HIPAA-ready organization
+hooks	Hooks reference
+interactive-mode	Interactive mode
+keybindings	Customize keyboard shortcuts
+llm-gateway	Other LLM gateways
+llm-gateway-connect	Connect Claude Code to an LLM gateway
+llm-gateway-protocol	Claude Code gateway compatibility guide
+llm-gateway-rollout	Roll out an LLM gateway for your organization
+managed-mcp	Control MCP server access for your organization
+managed-settings	Deploy managed settings
+microsoft-foundry	Claude Code on Microsoft Foundry
+model-config	Model configuration
+monitoring-usage	Monitoring
+network-config	Enterprise network configuration
+output-styles	Output styles
+permission-modes	Choose a permission mode
+permissions	Configure permissions
+plugins/cli-reference	Plugin commands reference
+plugins/create	Create a Claude Code plugin
+plugins/create-marketplace	Create a marketplace
+plugins/install	Install and manage plugins
+plugins/manifest-reference	Plugin manifest reference
+plugins/marketplace-reference	Marketplace reference
+plugins/mods/overview	Mods overview
+plugins/org	Manage Claude Code plugins for your organization
+plugins/troubleshooting	Troubleshoot plugins
+sandbox-environments	Choose a sandbox environment
+sandboxing	Configure the sandboxed Bash tool
+security	Security
+self-hosted-environments	Self-hosted environments
+self-hosted-environments-configuration	Customize sessions in self-hosted environments
+self-hosted-environments-deploy	Deploy self-hosted environments to production
+self-hosted-environments-identity	Verify session identity in self-hosted environments
+self-hosted-environments-quickstart	Self-hosted environments quickstart
+self-hosted-environments-reference	Self-hosted environments reference
+self-hosted-environments-testing	Test self-hosted environments end to end
+server-managed-settings	Configure server-managed settings
+settings	Settings files and precedence
+settings-example	Example settings files
+settings-reference	All settings
+setup	Advanced setup
+statusline	Customize your status line
+terminal-config	Configure your terminal for Claude Code
+third-party-integrations	Enterprise deployment overview
+tools-reference	Tools reference
+voice-dictation	Voice dictation
+zero-data-retention	Zero data retention
+agent-sdk/agent-loop	How the agent loop works
+agent-sdk/configuration	Configure your agent
+agent-sdk/cost-tracking	Track cost and usage
+agent-sdk/custom-tools	Give Claude custom tools
+agent-sdk/file-checkpointing	Rewind file changes with checkpointing
+agent-sdk/hooks	Intercept and control agent behavior with hooks
+agent-sdk/hosting	Hosting the Agent SDK
+agent-sdk/mcp	Connect to external tools with MCP
+agent-sdk/modifying-system-prompts	Modifying system prompts
+agent-sdk/observability	Observability with OpenTelemetry
+agent-sdk/permissions	Configure permissions
+agent-sdk/plugins	Plugins in the SDK
+agent-sdk/python	Agent SDK reference - Python
+agent-sdk/secure-deployment	Securely deploying AI agents
+agent-sdk/skills	Extend agents with skills
+agent-sdk/streaming-output	Stream responses in real-time
+agent-sdk/streaming-vs-single-mode	Streaming Input
+agent-sdk/structured-outputs	Get structured output from agents
+agent-sdk/subagents	Subagents in the SDK
+agent-sdk/todo-tracking	Track todos
+agent-sdk/tool-search	Scale to many tools with tool search
+agent-sdk/typescript	Agent SDK reference - TypeScript
+agent-sdk/typescript-v2-preview	TypeScript SDK V2 session API (removed)
+agent-sdk/user-input	Handle approvals and user input
+legal-and-compliance	Legal and compliance
+whats-new/2026-w13	Week 13 · March 23–27, 2026
+whats-new/2026-w14	Week 14 · March 30 – April 3, 2026
+whats-new/2026-w15	Week 15 · April 6–10, 2026
+whats-new/2026-w16	Week 16 · April 13–17, 2026
+whats-new/2026-w17	Week 17 · April 20–24, 2026
+whats-new/2026-w18	Week 18 · April 27 – May 1, 2026
+whats-new/2026-w19	Week 19 · May 4–8, 2026
+whats-new/2026-w20	Week 20 · May 11–15, 2026
+whats-new/2026-w21	Week 21 · May 18–22, 2026
+whats-new/2026-w22	Week 22 · May 25–29, 2026
+whats-new/2026-w23	Week 23 · June 1–5, 2026
+whats-new/2026-w24	Week 24 · June 8–12, 2026
+whats-new/2026-w25	Week 25 · June 15–19, 2026
+whats-new/2026-w26	Week 26 · June 22–26, 2026
+whats-new/2026-w27	Week 27 · June 29 – July 3, 2026
+whats-new/2026-w28	Week 28 · July 6–10, 2026
+whats-new/2026-w29	Week 29 · July 13–17, 2026
+whats-new/2026-w30	Week 30 · July 20–24, 2026
+whats-new/2026-w32	Week 32 · August 3–7, 2026
+whats-new/2026-w33	Week 33 · August 10–14, 2026
+whats-new/2026-w34	Week 34 · August 17–21, 2026
+whats-new/2026-w35	Week 35 · August 24–28, 2026
+whats-new/2026-w36	Week 36 · August 31 – September 4, 2026
+whats-new/2026-w37	Week 37 · September 7–11, 2026
+whats-new/index	What's new
