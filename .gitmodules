@@ -1,0 +1,3 @@
+[submodule "plugins/open-knowledge-plugin"]
+	path = plugins/open-knowledge-plugin
+	url = https://github.com/skogai2/open-knowledge-plugin.git
