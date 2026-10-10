@@ -1,3 +1,6 @@
 [submodule "plugins/open-knowledge-plugin"]
 	path = plugins/open-knowledge-plugin
 	url = https://github.com/skogai2/open-knowledge-plugin.git
+[submodule "projects/loadout"]
+	path = projects/loadout
+	url = https://github.com/skogai2/loadout
