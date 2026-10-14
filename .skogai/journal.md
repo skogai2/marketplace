@@ -476,3 +476,48 @@ What I left alone:
 
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
 
+## 2026-10-14 13:27 · turn 97da36df
+
+**User**
+
+> i removed the journals and commited the changes
+
+**Assistant**
+
+Your commit `d4a1443` has everything, the working tree is clean, and all 14 scripts were committed as executable.
+
+This session is still running the old 0.4.0 mod, so it will keep writing journals into whatever directory my shell is in until you restart. To check the status line and load 0.5.0, run `claude --plugin-dir plugins/hook-tap` from `~/marketplace`. The status line should then show `hook: <event>`, and each turn should add one entry to the root `.skogai/journal.md`.
+
+**Actions**
+
+- Bash: `git status --short; git log --oneline -1 --stat | head -30; git ls-files -s plugins/hook-tap/scripts | awk '{print $1, $…`
+
+## 2026-10-14 15:29 · turn f56f929e
+
+**User**
+
+> i reloaded the updated plugin so we can test it live
+
+**Assistant**
+
+Logging works live. After the reload, only new-format rows have appeared, so the old mod is unloaded:
+
+```
+13:29:47  UserPromptSubmit  f56f929e
+13:29:50  PreToolUse  Bash  f56f929e
+```
+
+The rows above them are left over from 0.4.0 in the old format (`stage` plus an `event` object). The status line skips them, and `Stop.sh` doesn't match them, so they cause no trouble.
+
+`.skogai/journal.md` is already staged, but that's 0.4.0's entry for the previous turn, written before the reload.
+
+There are two checks only you can do:
+1. **Status line:** it should read `hook: PostToolUse` now and `hook: Stop` when this reply ends.
+2. **Journal:** when this turn ends, `git diff --cached .skogai/journal.md` should show a new entry headed `turn f56f929e`, with this prompt and one Bash action.
+
+Send any message after that and I'll check the `Stop` row and the journal entry from my side.
+
+**Actions**
+
+- Bash: `tail -n 8 .skogai/logs/hook-tap/log.jsonl | jq -c '{ts, event, action, tool: .input.tool_name, pid: (.input.prompt_id //…`
+
