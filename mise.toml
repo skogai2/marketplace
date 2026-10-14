@@ -1,0 +1,2 @@
+[tools]
+worktrunk = { version = "latest", workflow = "release.yaml" }

@@ -1,0 +1,6 @@
+# Worktrunk project hooks — see https://worktrunk.dev
+#
+# New worktrees start with empty submodule directories; populate them before
+# anything else touches the worktree (pre-start blocks until done).
+[pre-start]
+submodules = "git submodule update --init"
