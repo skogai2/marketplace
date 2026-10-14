@@ -331,3 +331,64 @@ The change is made and staged:
 
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap && git mv .skogai/FEATURES.md FEATURES.md && sed -i 's#^- @features/diff-as…`
 
+## 2026-10-14 12:00 · turn 960f0e85
+
+**User**
+
+> now in the end of a session like we have just gone over, `wt step diff origin/master` is how i normally check "this is all the commits of the session" and is the last "sanity check" before essentially making a big "real commit" of what we have worked upon. for example: @/tmp/diff/big-diff is the current output and asking a new session about what it shows them gives this: 
+>
+> ```
+> The diff mostly makes sense. The final state is clean, and the journal explains how you got there, but a few things need fixing.
+>
+> **What works**
+> - The net result is easy to read. `FEATURES.md` shows up as a one-line change, not a rename, and the temporary `.skogai/FEATURES.md` and root `.skogai/features/` never appear.
+> - The layout is consistent. `CLAUDE.md` imports the `FEATURES.md` next to it, `FEATURES.md` uses a plain link to the details file, and the details file isn't imported.
+> - The journal shows how your intent changed, including where you overrode the suggestion to put the import in `.skogai/CLAUDE.md`. That "why" doesn't show in the file changes alone.
+>
+> **Issues**
+> 1. **Missing information in the `FEATURES.md` row.** The old row said what triggers it (`on turn.complete`) and that it runs `git add -A`. The new row describes the result but not the mechanism. For a hook plugin, the trigger is the most useful part. I'd keep "on `turn.complete`" in the row.
+> 2. **Unclear reference in `diff-as-handover.md` step 3.** "`.skogai/tmp/`, which `CLAUDE.md` imports" was clear when the file sat at the repo root. Now it lives in `plugins/hook-tap/.skogai/`, so it reads as the plugin's `CLAUDE.md`. Say "the root `CLAUDE.md`", the way step 1 says "at the git root".
+> 3. **Step 3 is described as if it already works.** The row and the earlier journal text only cover record and stage. If the session-start step isn't built yet, the details file should say so.
+> 4. **`## Context` is the wrong heading.** That section describes how the feature works, so something like `## How it works` fits better.
+> 5. **`plugins/hook-tap/.skogai/CLAUDE.md` is empty but still imported.** It does no harm, but in a diff it looks unfinished. Either give it one line saying what it's for, or drop it and its import line.
+>
+> **Problems in the journal itself**
+> - Turn f5bae6e5 mentions "`DIFF-AS-CONTEXT.md` doesn't mention it". That file isn't in the diff, so this line probably refers to something else or is a mistake.
+> - "within the limit of four" hops: I recall the documented import depth limit as 5. Check before relying on it.
+> - The quoted stdout has `&lt;stage&gt;` where the real file has `<stage>`. The journal escapes HTML, so it isn't an exact copy of what you saw.
+> - The Actions line cuts off the `sed` command with `…`. You can see the result in the diff, but the journal doesn't record exactly what was run.
+>
+> None of these block anything. I'd fix 1 and 2 first, since they affect what the next reader understands from the diff alone.
+> ```
+>
+> is this fair input in your eyes?
+
+**Assistant**
+
+Mostly fair. Most of the points hold up, two are wrong, and one is right but for the wrong reason.
+
+**Holds up:**
+- **1 (trigger missing from the row):** fair. For a hook plugin, "on `turn.complete`" is the most useful part.
+- **2 (ambiguous `CLAUDE.md`):** fair. The move made "which `CLAUDE.md` imports" ambiguous.
+- **3 (step 3 described as working):** fair, and the most important point. Nothing writes `.skogai/tmp/` yet, and the details file reads as if something does.
+- **4 (`## Context` heading):** a matter of taste. That heading was your choice.
+- **5 (empty imported `.skogai/CLAUDE.md`):** fair. I left it that way on purpose and said so, but the diff gives no reason for it.
+- **Truncated `sed` in the Actions line:** fair. My code cuts each action to its first 120 characters.
+
+**Wrong:**
+- **The import depth limit is four hops, not five.** `docs/memory.md:101` says "a maximum depth of four hops". The journal was right.
+- **`DIFF-AS-CONTEXT.md` isn't missing.** It's already in `origin/master` (committed in `c99a7fd`), so it falls outside the diff. That's a limit of reviewing against `origin/master`, not a mistake in the journal. My sentence in that turn was still wrong, though. `DIFF-AS-CONTEXT.md` does mention `FEATURES.md` (line 17), just by name and not as a link, so nothing breaks.
+
+**Right observation, wrong cause:**
+- **`&lt;stage&gt;`:** the journal doesn't escape anything. Your `!git diff --cached` output reached the prompt already escaped, and the journal copied the prompt as it received it.
+
+**What the review missed:**
+- **`DIFF-AS-CONTEXT.md` line 17 is now out of date.** It says the `FEATURES.md` row wasn't signed off, but you've since rewritten that row yourself.
+- **The journal starts mid-session.** The diff begins at journal line 122, and everything before 11:05 is missing. So is your main correction from this session ("not something i signed off on"). A reviewer working only from this diff can't know it happened.
+
+So it's useful input. The fixes I'd make are 1, 2, 3, and correcting `DIFF-AS-CONTEXT.md` line 17. I won't change anything until you say so.
+
+**Actions**
+
+- Bash: `grep -n "FEATURES" plugins/hook-tap/DIFF-AS-CONTEXT.md; grep -n "four hops" docs/memory.md; git log --oneline origin/mas…`
+
