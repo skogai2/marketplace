@@ -18,10 +18,6 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 - `claude -p "reply with just OK" --plugin-dir plugins/<name>` — headless load check.
 - `plugins/hook-tap/LEARNINGS.md` lists function-hook validator rules (string-literal event names, function-literal hooks, `$.noun.method()` only; one throwing hook stops the whole module loading). Read it before writing TypeScript hook modules.
 
-## Known issues
-
-- `loadout` is declared as a submodule at `projects/loadout` but its marketplace entry resolves to `plugins/loadout`. It should be moved to `plugins/loadout`.
-
 ## Git
 
 Commit directly to `master`; short messages are fine.
