@@ -122,3 +122,33 @@ I haven't changed anything for this. One more thing: my shell was sitting in `do
 - Bash: `cd /home/skogix/marketplace/docs && grep -n -i "import\|reload\|re-read\|session start\|compact" memory.md | head -30`
 - Bash: `cd /home/skogix/marketplace && pwd`
 
+## 2026-10-14 11:38 · turn 2dab9311
+
+**User**
+
+> Great. then how do we actually describe this as a feature in the end?
+
+**Assistant**
+
+I'd call the feature **"Diff as handover"**: each turn leaves the working tree in a state where `git diff --cached` plus the next message is the full context. Nothing else needs to be remembered between turns or sessions.
+
+As a single `FEATURES.md` row:
+
+```markdown
+- Diff as handover: each turn ends with a journal entry (prompt, reply, actions) in `.skogai/journal.md` and everything staged, so `git diff --cached` plus the next message is the full context; each `WIP` commit is one round.
+```
+
+The longer version, if it gets its own section or plugin, has three parts:
+
+1. **Record.** At the end of each turn, append the user's prompt, Claude's reply and the actions taken to `.skogai/journal.md` at the git root.
+2. **Stage.** Then run `git add -A` from the git root. Nothing commits automatically; the user reviews with `git diff --cached` and commits, usually as `WIP`.
+3. **Hand over.** At session start, write `git diff` and `git diff --cached` to `.skogai/tmp/`, which `CLAUDE.md` imports. A new session then starts with the uncommitted state already in context.
+
+What's left out on purpose:
+- No automatic commits until the staging can be trusted.
+- No mid-session diff injection.
+
+Your second TODO item, a separate log of only your messages for spotting changes of intent, builds on the same journal but is its own feature.
+
+I haven't written any of this to a file. Say where it should go, or edit the wording first.
+
