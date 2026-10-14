@@ -4,3 +4,10 @@
 # anything else touches the worktree (pre-start blocks until done).
 [pre-start]
 submodules = "git submodule update --init"
+
+# Installed copies of these plugins come from the GitHub remote, not this
+# checkout. After a merge into the default branch, publish it and refresh the
+# local marketplace clone so `claude` picks up the change. Runs in the
+# background; check `wt config state logs` if an update doesn't appear.
+[post-merge]
+publish = "claude plugin marketplace update skogai-marketplace"
