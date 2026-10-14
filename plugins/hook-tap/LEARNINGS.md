@@ -45,7 +45,7 @@ From `types/claude-code.d.ts` (`fs` section):
 
 ## Not done yet
 
-- **Interactive run not yet observed.** The status line and hot reload need a real terminal. Next step: `claude --plugin-dir ~/skogai-fleet/plugins/hook-tap` from the repo root, send a prompt that runs Bash, and check the status line and `log.jsonl`.
+- **Interactive run not yet observed.** The status line and hot reload need a real terminal. Next step: `claude --plugin-dir plugins/hook-tap` from the repo root, send a prompt that runs Bash, and check the status line and `log.jsonl`.
 - **`claude plugin test`** needs a `*.test.ts` file. Not written yet; the test kit's API is in `reference.md` under "Developing one".
 
 ## Filling in the rest of the events (build 2.1.295)

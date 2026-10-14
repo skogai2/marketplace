@@ -1,6 +1,6 @@
 # hook-tap
 
-A function-hooks mod for Claude Code, built to learn how hooks fire. It does three things:
+A function-hooks mod for Claude Code. It started as a way to learn how hooks fire, and is growing into "diff as handover": git as the only memory between turns and sessions. The end goal and what's left are in [FEATURES.md](FEATURES.md). Today it does three things:
 
 - **Status line:** shows `hook: <stage>` for the last event it saw.
 - **Log:** appends one JSON line per event to `.skogai/logs/hook-tap/log.jsonl`, relative to the session's working directory:
@@ -16,8 +16,8 @@ A function-hooks mod for Claude Code, built to learn how hooks fire. It does thr
 Start Claude from the repo root so the log path resolves:
 
 ```sh
-cd ~/skogai-fleet
-claude --plugin-dir ~/skogai-fleet/plugins/hook-tap
+cd ~/marketplace
+claude --plugin-dir plugins/hook-tap
 ```
 
 An interactive session watches a `--plugin-dir` folder, so saving `hooks/register.ts` reloads the mod. Watch the transcript for dim reload lines, or run with `claude --debug` to see skipped hooks and load errors.
