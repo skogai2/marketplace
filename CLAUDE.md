@@ -21,3 +21,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 ## Git
 
 Commit directly to `master`; short messages are fine.
+
+## SKOGAI
+
+- @.skogai/CLAUDE.md - example of how claude @-linking could help

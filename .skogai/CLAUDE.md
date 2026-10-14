@@ -1,0 +1,2 @@
+- @tmp/git-diff
+- @tmp/git-diff-cached

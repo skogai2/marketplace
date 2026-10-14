@@ -90,3 +90,35 @@ I didn't touch `FEATURES.md` or anything else. If the wording or the location is
 
 - Write `plugins/hook-tap/DIFF-AS-CONTEXT.md`
 
+## 2026-10-14 11:33 · turn dee57237
+
+**User**
+
+> now lastly to test the idea; would you agree that @.skogai/journal.md is a good representation overall as a handover? also @CLAUDE.md maybe can help us with some basic git-diff-implementation for the time being?
+
+**Assistant**
+
+Mostly yes. As a handover, the journal has the right shape: your words verbatim, the reasoning, and what was touched. It has three gaps:
+
+- **It only starts at 11:05.** Everything before the reload is missing: the design discussion, my unrequested implementation, and your "not signed off" correction. That correction is the most important thing for a new session to know. `DIFF-AS-CONTEXT.md` covers it, but only because I wrote it down. Until the journal starts with a session, it needs a doc like that next to it.
+- **Retried prompts appear twice** (`c90a2502` and `910533f4`). A reader can't tell which reply was kept.
+- **Actions show what was done, not the result.** For a handover that's fine, since the diff shows the result.
+
+The `@`-import chain works for a basic version: `CLAUDE.md` → `.skogai/CLAUDE.md` → `.skogai/tmp/git-diff*`. Relative imports resolve from the importing file, so the paths are right. Two limits:
+
+1. **Imports load at launch** (`docs/memory.md`), so the diff files are a snapshot of when the session started. That suits a handover into a new session, but they won't update mid-session. Whatever writes them has to run before Claude starts: a `SessionStart` hook, a `Stop` hook from the previous session, or you by hand.
+2. **Gitignore `.skogai/tmp/*`** and keep only `.gitkeep`. If the diff files are tracked, they get staged too, and each diff contains the previous diff.
+
+That covers your first new TODO item. The generator could be as small as a `SessionStart` command hook running:
+
+```sh
+git diff > .skogai/tmp/git-diff; git diff --cached > .skogai/tmp/git-diff-cached
+```
+
+I haven't changed anything for this. One more thing: my shell was sitting in `docs/` at the start of this turn, and I moved it back to the repo root. If I hadn't, this turn's journal entry would have landed in `docs/.skogai/journal.md`. That's the working-directory problem from the doc, happening for real.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/docs && grep -n -i "import\|reload\|re-read\|session start\|compact" memory.md | head -30`
+- Bash: `cd /home/skogix/marketplace && pwd`
+

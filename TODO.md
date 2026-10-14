@@ -23,4 +23,5 @@ Manual steps from CLAUDE.md that could be enforced instead of remembered.
 
 ## User input
 
-- [ ] example added as a todo-item
+- [ ] add `git diff` and `git diff --cached` generation to ./tmp/git-diff and ./tmp/git-diff-cached
+- [ ] add a "user messages"-log for only user messages. end goal being "look over user messages and see if potential changes of intent have happened and set up new tasks for them"
