@@ -11,17 +11,17 @@
   "plugins": [
     {
       "name": "hook-tap",
-      "source": "./hook-tap",
+      "source": "hook-tap",
       "description": "Shows the current hook stage in the status line and appends each event's input to log.jsonl, for learning how hooks fire."
     },
     {
       "name": "loadout",
-      "source": "./loadout",
+      "source": "loadout",
       "description": "change loadouts in claude code"
     },
     {
       "name": "open-knowledge-plugin",
-      "source": "./open-knowledge-plugin",
+      "source": "open-knowledge-plugin",
       "description": "open knowledge format plugin"
     }
   ]
