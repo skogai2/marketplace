@@ -68,3 +68,25 @@ One thing in your placeholder: the journal entry it carries is for turn `c90a250
 
 The next step would be a `UserPromptSubmit` hook that adds `git diff --cached` to your prompt automatically, so you don't have to type `!git diff --cached`. Should I propose that as a script, the same way as the journal script?
 
+## 2026-10-14 11:23 · turn cf615b8a
+
+**User**
+
+> no. but the concept overall should be documented so we can start working towards doing something with it in another session
+
+**Assistant**
+
+I wrote the concept up in `plugins/hook-tap/DIFF-AS-CONTEXT.md`. When this turn ends, hook-tap stages it along with the journal entry, so it will show up in your next `git diff --cached`.
+
+The file has four sections:
+- **The idea:** your message plus the staged diff is the full context of a turn, and each `WIP` commit is one complete round.
+- **Current state:** says plainly that neither the TypeScript journal nor its `FEATURES.md` row was signed off by you.
+- **Known problems:** the journal follows the session's working directory into subfolders, retried prompts get recorded twice, the journal file will eventually hit a 4 MiB size limit, and you need to commit Claude's staged turn before your own edits or the two mix in one diff.
+- **Directions, not decided:** the short-script replacement, and feeding the staged diff into context automatically, which you declined for now.
+
+I didn't touch `FEATURES.md` or anything else. If the wording or the location is wrong, edit it before you commit.
+
+**Actions**
+
+- Write `plugins/hook-tap/DIFF-AS-CONTEXT.md`
+
