@@ -16,6 +16,55 @@ const enqueue = (task: () => Promise<void>) => {
 const lineFor = (stage: string, e: unknown) =>
   JSON.stringify({ ts: new Date().toISOString(), stage, event: e }) ?? 'null'
 
+// Turn journal: a tracked, human-readable record of each turn (the prompt, the
+// assistant's text, and the tools it used). On turn.complete the entry is
+// appended here and everything is staged with `git add -A`, so
+// `git diff --cached` shows the changes next to why they were made.
+// log.jsonl stays ignored; this file must not be under .skogai/logs/.
+const JOURNAL = '.skogai/journal.md'
+
+type Turn = { id: string; prompt: string; texts: string[]; actions: string[] }
+let turn: Turn | null = null
+
+const firstLine = (s: string, max = 120) => {
+  const line = s.split('\n')[0]
+  return line.length > max ? line.slice(0, max) + '…' : line
+}
+
+// One line per tool use. File tools show the path relative to cwd.
+const actionFor = (name: string, input: Record<string, unknown>, cwd: string) => {
+  const rel = (p: unknown) =>
+    typeof p === 'string' && p.startsWith(cwd + '/') ? p.slice(cwd.length + 1) : String(p)
+  if (name === 'Bash') return `Bash: \`${firstLine(String(input.command ?? ''))}\``
+  if ('file_path' in input) return `${name} \`${rel(input.file_path)}\``
+  if ('path' in input) return `${name} \`${rel(input.path)}\``
+  const arg = Object.values(input).find(v => typeof v === 'string')
+  return arg ? `${name}: ${firstLine(String(arg))}` : name
+}
+
+// Collects text and tool_use blocks from an assistant response row.
+const collect = (t: Turn, e: any, cwd: string) => {
+  if (e?.door !== 'response' || e?.message?.role !== 'assistant') return
+  for (const block of e.message.content ?? []) {
+    if (block?.type === 'text' && block.text?.trim()) t.texts.push(block.text.trim())
+    if (block?.type === 'tool_use') t.actions.push(actionFor(block.name, block.input ?? {}, cwd))
+  }
+}
+
+const entryFor = (t: Turn, aborted: boolean) => {
+  const quote = (s: string) => s.split('\n').map(l => (l ? '> ' + l : '>')).join('\n')
+  const ts = new Date().toISOString().replace('T', ' ').slice(0, 16)
+  const parts = [
+    `## ${ts} · turn ${t.id.slice(0, 8)}${aborted ? ' (interrupted)' : ''}`,
+    '**User**',
+    quote(t.prompt.trim()),
+    '**Assistant**',
+    t.texts.join('\n\n') || '_(no text)_',
+  ]
+  if (t.actions.length) parts.push('**Actions**', t.actions.map(a => `- ${a}`).join('\n'))
+  return parts.join('\n\n') + '\n\n'
+}
+
 // Left out on purpose:
 //   - turn.step and process.spawn are streams: a plain async hook isn't what
 //     the engine expects there, they need an async generator.
@@ -78,6 +127,7 @@ export const register: Register = on => {
 
   on('session.append', async ($, e, next) => {
     $.ui.status('hook: session.append')
+    if (turn) collect(turn, e, await $.session.cwd())
     await enqueue(async () => {
       const previous = (await $.fs.exists(LOG)) ? await $.fs.read(LOG) : ''
       await $.fs.write(LOG, previous + lineFor('session.append', e) + '\n')
@@ -114,6 +164,7 @@ export const register: Register = on => {
 
   on('turn.start', async ($, e, next) => {
     $.ui.status('hook: turn.start')
+    if (!(e as any).agentId) turn = { id: e.turnId, prompt: e.text ?? '', texts: [], actions: [] }
     await enqueue(async () => {
       const previous = (await $.fs.exists(LOG)) ? await $.fs.read(LOG) : ''
       await $.fs.write(LOG, previous + lineFor('turn.start', e) + '\n')
@@ -123,6 +174,17 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     $.ui.status('hook: turn.complete')
+    const done = !(e as any).agentId && turn?.id === e.turnId ? turn : null
+    if (done) {
+      turn = null
+      await enqueue(async () => {
+        const previous = (await $.fs.exists(JOURNAL)) ? await $.fs.read(JOURNAL) : ''
+        await $.fs.write(JOURNAL, previous + entryFor(done, e.isAborted))
+        try {
+          await $.process.run(['git', 'add', '-A'])
+        } catch {}
+      })
+    }
     await enqueue(async () => {
       const previous = (await $.fs.exists(LOG)) ? await $.fs.read(LOG) : ''
       await $.fs.write(LOG, previous + lineFor('turn.complete', e) + '\n')

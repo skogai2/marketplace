@@ -1,6 +1,6 @@
 # hook-tap
 
-A function-hooks mod for Claude Code, built to learn how hooks fire. It does two things:
+A function-hooks mod for Claude Code, built to learn how hooks fire. It does three things:
 
 - **Status line:** shows `hook: <stage>` for the last event it saw.
 - **Log:** appends one JSON line per event to `.skogai/logs/hook-tap/log.jsonl`, relative to the session's working directory:
@@ -8,6 +8,8 @@ A function-hooks mod for Claude Code, built to learn how hooks fire. It does two
   ```json
   {"ts":"2026-10-04T18:00:00.000Z","stage":"tool.call","event":{...the event's input...}}
   ```
+
+- **Turn journal:** when a main-conversation turn ends, appends a Markdown entry (the prompt, the assistant's text, and one line per tool use) to `.skogai/journal.md`, then runs `git add -A`. `git diff --cached` then shows each change next to the reason for it. Nothing is committed automatically. Subagent turns are skipped.
 
 ## Running it
 
