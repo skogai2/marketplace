@@ -1,28 +1,19 @@
 # hook-tap
 
-A function-hooks mod for Claude Code. It started as a way to learn how hooks fire, and is growing into "diff as handover": git as the only memory between turns and sessions. The end goal and what's left are in [FEATURES.md](FEATURES.md). Today it does three things:
+A Claude Code plugin for acting upon hook events. Each event we act upon has its own script, every action is logged, and the status line shows the event being acted upon. What it does and why is in [FEATURES.md](FEATURES.md):
 
-- **Status line:** shows `hook: <stage>` for the last event it saw.
-- **Log:** appends one JSON line per event to `.skogai/logs/hook-tap/log.jsonl`, relative to the session's working directory:
-
-  ```json
-  {"ts":"2026-10-04T18:00:00.000Z","stage":"tool.call","event":{...the event's input...}}
-  ```
-
-- **Turn journal:** when a main-conversation turn ends, appends a Markdown entry (the prompt, the assistant's text, and one line per tool use) to `.skogai/journal.md`, then runs `git add -A`. `git diff --cached` then shows each change next to the reason for it. Nothing is committed automatically. Subagent turns are skipped.
+- **Event log:** one JSON row per event we act upon in `.skogai/logs/hook-tap/log.jsonl` at the git root.
+- **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root and runs `git add -A`. Nothing is committed automatically.
+- **Status line:** shows `hook: <event>` from the log's last row.
 
 ## Running it
-
-Start Claude from the repo root so the log path resolves:
 
 ```sh
 cd ~/marketplace
 claude --plugin-dir plugins/hook-tap
 ```
 
-An interactive session watches a `--plugin-dir` folder, so saving `hooks/register.ts` reloads the mod. Watch the transcript for dim reload lines, or run with `claude --debug` to see skipped hooks and load errors.
-
-Check the mod at any time, without a session:
+The scripts need `bash`, `jq`, `git` and `flock`. Check the plugin without a session:
 
 ```sh
 claude plugin validate plugins/hook-tap
@@ -31,40 +22,29 @@ claude plugin validate plugins/hook-tap
 Tail the log while you use Claude:
 
 ```sh
-tail -f .skogai/logs/hook-tap/log.jsonl | jq -c '{stage, event}'
+tail -f .skogai/logs/hook-tap/log.jsonl | jq -c '{event, action}'
 ```
 
 ## Files
 
 ```
 .claude-plugin/plugin.json   manifest
-hooks/hooks.json             {"modules": ["./register.ts"]}
-hooks/register.ts            the module: one on() per event
+hooks/hooks.json             the events we act upon, plus the status-line module
+hooks/register.ts            the status-line mod: shows the log's last event
+scripts/events/<Event>.sh    one script per event, run with the event's JSON on stdin
+scripts/append-json.sh       appends one row to the log: <json> | append-json.sh [action]
 ```
 
-## What is logged
+## Acting upon another event
 
-Every event `claude plugin validate` can register a plain hook for, grouped as the [reference](https://code.claude.com/docs/en/plugins/mods/reference#events) groups them:
+1. Add the event to `hooks/hooks.json`, pointing at `scripts/events/<Event>.sh`. The events are listed in the [hooks reference](https://code.claude.com/docs/en/hooks#hook-events).
+2. Write the script. Do the work, then pipe the input to `append-json.sh` with a short description of what you did. A script that only logs is one line:
 
-- **Session:** `session.start`, `session.end`, `session.compact`, `session.receive`, `session.send`, `session.append`, `session.attach`, `session.detach`, `session.measure`
-- **Turns:** `turn.start`, `turn.complete`
-- **Prompts:** `prompt.submit`, `prompt.compose`, `prompt.section`, `prompt.context`, `prompt.attachment`, `prompt.mention`, `skill.prompt`, `attribution.text`
-- **Commands and configuration:** `command.run`, `command.describe`, `config.set`, `config.describe`
-- **Tools:** `tool.call`, `tool.check`, `tool.describe`
-- **Subagents:** `agent.offer`, `agent.spawn`
-- **Interface:** `ui.resolve`, `ui.press`, `ui.input`, `ui.select`, `ui.focus`, `ui.scroll`, `ui.close`, `ui.message`, `ui.fault`
-- **Other mods:** `plugin.register`
-- **Settings hooks:** `classic.*`, a wildcard that matches every settings-hook event (`Stop`, `PreToolUse`, `SessionStart`, ...) in one handler. `e` carries the same stdin JSON a settings hook would read, including `hook_event_name`, so the logged line still says which one fired.
+   ```sh
+   exec "$(dirname "$0")/../append-json.sh"
+   ```
 
-Left out on purpose:
-
-- `turn.step` and `process.spawn` are streams. Subscribing to them needs an async generator hook, not a plain one.
-- `telemetry.log` and `telemetry.mark` are high volume, and a mod we install must filter them with `{ to: 'collector' }` or the validator rejects the module.
-- `ui.render` fires on every redraw and would bury everything else.
-- `prompt.edit`, `prompt.fill`, and `prompt.suggest` fire on the keystroke path (the prompt box as the user types), so they'd flood the log the same way `ui.render` would.
-- `engine.create` fires while `$` itself is still being built for this mod, so `$.ui.status` and `$.fs` aren't there yet. A hook on it threw `undefined is not an object` — see [LEARNINGS.md](LEARNINGS.md).
-
-To log more, add an `on('<event>', ...)` block. Add it by name: the validator rejects anything else.
+A script can also answer back the way any command hook can, with exit code 2 or JSON on stdout.
 
 ## Learnings
 

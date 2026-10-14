@@ -14,18 +14,15 @@ The staged diff then holds both sides: the journal hunk carries Claude's previou
 
 ## Current state
 
-- hook-tap 0.4.0 writes the journal and runs `git add -A` on `turn.complete`. It's about 60 lines of TypeScript in `hooks/register.ts`. The implementation was not signed off. The end goal and feature status are in `FEATURES.md`, with details in `.skogai/features/diff-as-handover.md`.
+- hook-tap 0.5.0 writes the journal and runs `git add -A` on the plain `Stop` hook, from `scripts/events/Stop.sh`, at the git root. The implementation was not signed off. The features are listed in `FEATURES.md`, with details in `.skogai/features/diff-as-handover.md`.
 - Nothing commits automatically. Staging only, until the automation can be trusted.
 - The big `log.jsonl` stays globally gitignored, as the raw source.
 
 ## Known problems
 
-- **Paths follow the session's working directory.** If Claude's shell is in a subdirectory when a turn ends, the journal lands in `<subdir>/.skogai/journal.md` and `git add -A` runs from there. Resolve both against the git root.
 - **Rewound or retried prompts are journaled twice.** The journal keeps a turn even after a rewind.
-- **The whole journal is rewritten each turn** (`$.fs` has no append), so it will eventually hit the 4 MiB read limit.
 - **Your diff only shows your changes if you commit Claude's staged turn first.** Otherwise both turns are mixed in one diff.
 
 ## Directions, not decided
 
-- Replace the TypeScript with a short script run by settings hooks: `UserPromptSubmit` writes the prompt, and `Stop` writes `last_assistant_message` and runs `git add -A` from `git rev-parse --show-toplevel`.
 - Feed `git diff --cached` into context automatically on `UserPromptSubmit`, instead of typing `!git diff --cached`. Declined for now.

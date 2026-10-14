@@ -10,7 +10,8 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 ## Status
 
-- Steps 1 and 2 are built: `hooks/register.ts` runs them on `turn.complete`. They use the session's working directory, not the git root yet (see `DIFF-AS-CONTEXT.md`, "Known problems").
+- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
+- `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
 - Step 3 is not built yet. Nothing writes `.skogai/tmp/git-diff` or `.skogai/tmp/git-diff-cached`.
 
 ## Left out on purpose

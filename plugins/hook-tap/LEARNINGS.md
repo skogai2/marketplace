@@ -57,3 +57,15 @@ Expanded from 10 events to every plain (non-generator) event the validator will 
 - **Everything else loaded and fired with the same four-line pattern** (`$.ui.status`, read-if-exists, append, `return next(e)`) as the original ten events — no event needed a different return shape just to observe-and-pass-through.
 - **High-frequency groups exist beyond the three already known.** `command.describe`, `prompt.section`, `tool.describe`, and `agent.offer` each fired many times in a single turn (once per command/section/tool/subagent-type on offer) but stayed bounded — unlike `ui.render` or the keystroke-path prompt events, they don't need excluding, just expect a burst.
 - **`prompt.edit`, `prompt.fill`, `prompt.suggest` were excluded without testing them**, by inference from their one-line descriptions (prompt-box-as-you-type) and `prompt.edit`'s 50ms hook budget in the limits table, which is otherwise only given to hot-path hooks. Worth confirming directly in an interactive session.
+
+## Back to plain hooks (0.5.0)
+
+The plugin started as a way to act upon what Claude Code calls hooks, and drifted into a TypeScript mod. 0.5.0 moves the acting back to plain command hooks in `hooks/hooks.json`, one script per event, and keeps a mod only for the status line.
+
+- **One `hooks.json` can hold both.** `"modules"` for the mod and `"hooks"` for command hooks sit side by side, and `claude plugin validate` accepts it.
+- **Plain hooks avoid the `$.fs` problems.** The event JSON arrives on stdin, `>>` really appends, and `git rev-parse --show-toplevel` fixes the working-directory problem. No 4 MiB limit, no read-modify-write queue.
+- **`$.process.run` has no stdin,** only an argument list, and one Linux argument is capped at 128 KiB. That ruled out a mod that hands events to scripts as arguments.
+- **`prompt_id` ties a turn together.** `UserPromptSubmit`, `PostToolUse` and `Stop` all carry it, so `Stop.sh` finds the turn's prompt and tool uses with `grep -F "$prompt_id"` on the log. Subagent rows carry `agent_id` and are skipped.
+- **`classic.*` lets a mod follow the plain hooks.** Awaiting `next(e)` before reading the log is meant to let the plain hooks write their row first. Not yet confirmed in an interactive session.
+- **The validator reports `gating hook without .catch: classic.*`.** It's informational. The hook catches its own errors and always returns `next`'s result.
+- **Headless check:** `claude -p` in a scratch repo, started from a subdirectory, logged `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` (with its action) and `SessionEnd`. The journal entry landed at the git root and was staged.
