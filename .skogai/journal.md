@@ -152,3 +152,48 @@ Your second TODO item, a separate log of only your messages for spotting changes
 
 I haven't written any of this to a file. Say where it should go, or edit the wording first.
 
+## 2026-10-14 11:45 · turn e42aaa7f
+
+**User**
+
+> <bash-stdout>diff --git c/.skogai/features/diff-as-handover.md i/.skogai/features/diff-as-handover.md
+> new file mode 100644
+> index 0000000..61b5e13
+> --- /dev/null
+> +++ i/.skogai/features/diff-as-handover.md
+> @@ -0,0 +1,10 @@
+> +# Diff as handover
+> +
+> +Each turn leaves the working tree in a state where `git diff --cached` plus the next message is the full context. Nothing else needs to be remembered between turns or sessions.
+> +
+> +# Context
+> +
+> +1. **Record.** At the end of each turn, append the user's prompt, Claude's reply and the actions taken to `.skogai/journal.md` at the git root.
+> +2. **Stage.** Then run `git add -A` from the git root. Nothing commits automatically; the user reviews with `git diff --cached` and commits, usually as `WIP`.
+> +3. **Hand over.** At session start, write `git diff` and `git diff --cached` to `.skogai/tmp/`, which `CLAUDE.md` imports. A new session then starts with the uncommitted state already in context.
+> +
+> diff --git c/plugins/hook-tap/FEATURES.md i/plugins/hook-tap/FEATURES.md
+> index ff3e6c2..404dc93 100644
+> --- c/plugins/hook-tap/FEATURES.md
+> +++ i/plugins/hook-tap/FEATURES.md
+> @@ -2,4 +2,4 @@
+>  
+>  - Show the current hook event in the status line (`hook: &lt;stage&gt;`).
+>  - Log each event's input as one JSON line to `.skogai/logs/hook-tap/log.jsonl`.
+> -- Turn journal: on `turn.complete`, append the turn's prompt, the assistant's text, and its tool actions to `.skogai/journal.md` (tracked), then stage everything with `git add -A`. Review with `git diff --cached`; committing stays manual for now.
+> +- @.skogai/features/diff-as-handover.md - each turn ends with a journal entry (prompt, reply, actions) in `.skogai/journal.md` and everything staged, so `git diff --cached` plus the next message is the full context; each `WIP` commit is one round.</bash-stdout><bash-stderr></bash-stderr>
+
+**Assistant**
+
+The staged changes look right. The one problem is the `@` link in `plugins/hook-tap/FEATURES.md`: `@` paths resolve from the file that contains them. That makes `@.skogai/features/diff-as-handover.md` point at `plugins/hook-tap/.skogai/features/diff-as-handover.md`, which doesn't exist. Change it to:
+
+```markdown
+- @../../.skogai/features/diff-as-handover.md - each turn ends with …
+```
+
+Nothing imports `FEATURES.md` yet, so it does no harm today, but the link would break once something does.
+
+A smaller one: `diff-as-handover.md` has two top-level headings. If you want `Context` to sit under the title, make it `## Context`.
+
+I haven't changed either file.
+
