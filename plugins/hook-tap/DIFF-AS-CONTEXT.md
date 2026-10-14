@@ -14,7 +14,7 @@ The staged diff then holds both sides: the journal hunk carries Claude's previou
 
 ## Current state
 
-- hook-tap 0.4.0 writes the journal and runs `git add -A` on `turn.complete`. It's about 60 lines of TypeScript in `hooks/register.ts`. The implementation and its `FEATURES.md` row were not signed off.
+- hook-tap 0.4.0 writes the journal and runs `git add -A` on `turn.complete`. It's about 60 lines of TypeScript in `hooks/register.ts`. The implementation was not signed off. The `FEATURES.md` row has since been rewritten by the user, with details in `.skogai/features/diff-as-handover.md`.
 - Nothing commits automatically. Staging only, until the automation can be trusted.
 - The big `log.jsonl` stays globally gitignored, as the raw source.
 

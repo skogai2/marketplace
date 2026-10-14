@@ -392,3 +392,26 @@ So it's useful input. The fixes I'd make are 1, 2, 3, and correcting `DIFF-AS-CO
 
 - Bash: `grep -n "FEATURES" plugins/hook-tap/DIFF-AS-CONTEXT.md; grep -n "four hops" docs/memory.md; git log --oneline origin/mas…`
 
+## 2026-10-14 12:02 · turn e8cfb683
+
+**User**
+
+> please do the changes as you see fit
+
+**Assistant**
+
+I've made the four changes and staged them in three files:
+
+- **`FEATURES.md` (review point 1):** the row now names the trigger and the command: "on `turn.complete` … everything staged with `git add -A`".
+- **`diff-as-handover.md`, step 3 (point 2):** now says "`.skogai/tmp/` at the git root, which the root `CLAUDE.md` imports".
+- **`diff-as-handover.md`, new `## Status` section (point 3):** says steps 1 and 2 are built and step 3 isn't. It also says steps 1 and 2 currently use the session's working directory, not the git root. Steps 1 and 2 already said "at the git root", which the code doesn't do yet, so I didn't want the file to claim it.
+- **`DIFF-AS-CONTEXT.md` line 17:** now says you rewrote the `FEATURES.md` row, and points to the details file.
+
+I left `## Context` and the empty `.skogai/CLAUDE.md` as they are, since both were your choices. My shell is back at the repo root, so this turn's journal entry lands in the right place.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && sed -i 's#^- Steps 1 and 2 are built: `hooks/register.ts` runs them on `…`
+- Bash: `cd /home/skogix/marketplace && pwd`
+
