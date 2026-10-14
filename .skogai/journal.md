@@ -197,3 +197,137 @@ A smaller one: `diff-as-handover.md` has two top-level headings. If you want `Co
 
 I haven't changed either file.
 
+## 2026-10-14 11:47 · turn f5bae6e5
+
+**User**
+
+> <bash-stdout>diff --git c/plugins/hook-tap/.skogai/CLAUDE.md i/plugins/hook-tap/.skogai/CLAUDE.md
+> new file mode 100644
+> index 0000000..115f76e
+> --- /dev/null
+> +++ i/plugins/hook-tap/.skogai/CLAUDE.md
+> @@ -0,0 +1 @@
+> +- @FEATURES.md
+> diff --git c/plugins/hook-tap/.skogai/FEATURES.md i/plugins/hook-tap/.skogai/FEATURES.md
+> new file mode 100644
+> index 0000000..4c16f0c
+> --- /dev/null
+> +++ i/plugins/hook-tap/.skogai/FEATURES.md
+> @@ -0,0 +1,5 @@
+> +# Features
+> +
+> +- Show the current hook event in the status line (`hook: &lt;stage&gt;`).
+> +- Log each event's input as one JSON line to `.skogai/logs/hook-tap/log.jsonl`.
+> +- @features/diff-as-handover.md - each turn ends with a journal entry (prompt, reply, actions) in `.skogai/journal.md` and everything staged, so `git diff --cached` plus the next message is the full context; each `WIP` commit is one round.
+> diff --git c/.skogai/features/diff-as-handover.md i/plugins/hook-tap/.skogai/features/diff-as-handover.md
+> similarity index 100%
+> rename from .skogai/features/diff-as-handover.md
+> rename to plugins/hook-tap/.skogai/features/diff-as-handover.md
+> diff --git c/plugins/hook-tap/CLAUDE.md i/plugins/hook-tap/CLAUDE.md
+> new file mode 100644
+> index 0000000..a32db63
+> --- /dev/null
+> +++ i/plugins/hook-tap/CLAUDE.md
+> @@ -0,0 +1 @@
+> +- @.skogai/CLAUDE.md
+> diff --git c/plugins/hook-tap/FEATURES.md i/plugins/hook-tap/FEATURES.md
+> deleted file mode 100644
+> index 404dc93..0000000
+> --- c/plugins/hook-tap/FEATURES.md
+> +++ /dev/null
+> @@ -1,5 +0,0 @@
+> -# Features
+> -
+> -- Show the current hook event in the status line (`hook: &lt;stage&gt;`).
+> -- Log each event's input as one JSON line to `.skogai/logs/hook-tap/log.jsonl`.
+> -- @.skogai/features/diff-as-handover.md - each turn ends with a journal entry (prompt, reply, actions) in `.skogai/journal.md` and everything staged, so `git diff --cached` plus the next message is the full context; each `WIP` commit is one round.</bash-stdout><bash-stderr></bash-stderr>
+
+**Assistant**
+
+All the links now resolve. Each `@` path is relative to the file it's in, so the chain is:
+
+1. `plugins/hook-tap/CLAUDE.md`
+2. → `plugins/hook-tap/.skogai/CLAUDE.md`
+3. → `plugins/hook-tap/.skogai/FEATURES.md`
+4. → `plugins/hook-tap/.skogai/features/diff-as-handover.md`
+
+That's three hops, within the limit of four.
+
+The catch is when it loads. A `CLAUDE.md` in a subdirectory isn't loaded at launch; Claude Code only loads it once Claude reads a file under `plugins/hook-tap/`. A session started at the repo root won't see the feature list until it touches hook-tap. That's reasonable scoping, but it means it isn't part of the handover. If you want it at launch, add `@plugins/hook-tap/CLAUDE.md` to the root `CLAUDE.md` or `.skogai/CLAUDE.md`.
+
+Also, the move deleted `plugins/hook-tap/FEATURES.md`, and `DIFF-AS-CONTEXT.md` doesn't mention it, so nothing points at a stale path.
+
+## 2026-10-14 11:48 · turn b5ff8220
+
+**User**
+
+> the important part is this; do my intentions show clearly from a simply git diff?
+
+**Assistant**
+
+Mostly. The diff makes the structure clear, but your reasons for it aren't in the diff.
+
+**Clear from the diff alone:**
+- Each plugin gets its own `.skogai/` folder, mirroring the one at the repo root.
+- `CLAUDE.md` is the entry point and imports `.skogai/CLAUDE.md`, which imports the content. Documentation is meant to load into Claude's context through import chains, not be read on request.
+- `FEATURES.md` becomes an index, with one file per feature linked from it.
+- The feature belongs to hook-tap, not the whole repo, because you moved it from the root `.skogai/` into the plugin.
+
+**Not clear from the diff alone:**
+- Whether `plugins/hook-tap/CLAUDE.md` loading only when hook-tap's files are touched is what you intended, or a side effect.
+- Whether per-plugin `.skogai/` is now the convention for every plugin, or just a trial on hook-tap.
+- Whether the root `.skogai/features/` is gone for good, or only this one feature moved.
+
+That split is the design you described: the diff carries the what, and your message carries the why. Here your message was only a question, so a reader of the next diff has to guess those three points. A single sentence such as "trying per-plugin .skogai as the pattern; scoped loading is intended" would have answered all three.
+
+## 2026-10-14 11:50 · turn e102d098
+
+**User**
+
+> i would say that is good enough. we could move FEATURES.md outside the .skogai/ folder and use .skogai/features/foo.md for "more information can be found here" and remove the @-link to it and instead use regular markdown links/simply mention it.
+
+**Assistant**
+
+Agreed. The index stays in context, and the details are loaded only when Claude actually needs them. The layout would be:
+
+```
+plugins/hook-tap/
+├── CLAUDE.md                  - @.skogai/CLAUDE.md
+├── FEATURES.md                one line per feature, plain links
+└── .skogai/
+    ├── CLAUDE.md              - @../FEATURES.md
+    └── features/
+        └── diff-as-handover.md
+```
+
+with the feature row as a plain link:
+
+```markdown
+- Diff as handover: each turn ends with a journal entry … each `WIP` commit is one round. Details: [.skogai/features/diff-as-handover.md](.skogai/features/diff-as-handover.md)
+```
+
+Because it's a markdown link and not an `@` import, the details file stays out of context until Claude opens it.
+
+The one choice to make is what imports `FEATURES.md`. Either `.skogai/CLAUDE.md` imports `@../FEATURES.md`, as shown, or `plugins/hook-tap/CLAUDE.md` imports it directly. The first keeps all the imports inside `.skogai/`.
+
+Should I make the change?
+
+## 2026-10-14 11:51 · turn d11456f6
+
+**User**
+
+> please do. now FEATURES.md should always be included by the same level CLAUDE.md in this case. please go ahead
+
+**Assistant**
+
+The change is made and staged:
+
+- `plugins/hook-tap/FEATURES.md` is back at the plugin root. The feature row now uses a plain markdown link to `.skogai/features/diff-as-handover.md`, so the details load only when opened.
+- `plugins/hook-tap/CLAUDE.md` imports `@FEATURES.md`, which sits at the same level as it does.
+
+`plugins/hook-tap/.skogai/CLAUDE.md` no longer imports anything, so it's now empty. I kept it, and `CLAUDE.md` still imports it with `- @.skogai/CLAUDE.md`, so it's ready for content later. If you'd rather not have an empty file, delete both it and that import line.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && git mv .skogai/FEATURES.md FEATURES.md && sed -i 's#^- @features/diff-as…`
+
