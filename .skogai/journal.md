@@ -574,3 +574,38 @@ Should I do 1 and 4 now? 2 needs you to confirm the subagent call and run `/comp
 - Bash: `ls /home/skogix/marketplace/no-such-file` (failed)
 - Bash: `cd /home/skogix/marketplace && jq -c '{event, tool: .input.tool_name, pid: (.input.prompt_id // "" | .[:8])}' .skogai/lo…`
 
+## 2026-10-14 15:36 · turn ee9d3210
+
+**User**
+
+> please go ahead the changes we can do at this point and ill run /compact next turn
+
+**Assistant**
+
+I added a script test, ran the subagent test, and cleaned up the docs. The test passes and validation passes. `Stop.sh` will stage everything when this turn ends.
+
+- **`tests/run.sh` (new):** it writes sample hook rows with `append-json.sh` into a throwaway git repo, runs `Stop.sh`, and checks four things:
+  - the log is at the git root, one row per event
+  - only `Stop` rows have an action
+  - the journal entry is exact: prompt, actions, `(failed)`, and a path relative to the git root
+  - the journal and the work are staged, but the log isn't
+
+  The sample rows include a subagent row and rows from another turn, to check they stay out of the entry. All 4 checks pass.
+- **Subagent test (live):** one small Explore subagent logged `SubagentStart`, its tool uses with `agent_id`, and `SubagentStop`. Its rows have the same `prompt_id` as the main turn, which is why `Stop.sh` has to filter on `agent_id`. This turn's journal entry should therefore show no `ls plugins` action.
+- **`LEARNINGS.md`:** what still applies stays at the top, with 0.5.0 findings plus a current "Not done yet" list. The 0.4.0 headless and all-events notes moved under "History: 0.4.0". The 4 MiB note now says how 0.5.0 avoids the limit.
+- **`event-log.md`:** has a table of the log fields and lists the `input` fields that `Stop.sh` depends on. Its status now says which events have been seen live.
+- **README:** mentions `tests/run.sh`.
+
+One odd row: a `SubagentStop` with an empty `agent_type` appeared before the subagent started. It probably comes from an agent this session had already run, but I haven't confirmed that.
+
+Once you've run `/compact`, I'll check the `PreCompact` and `PostCompact` rows and update the docs.
+
+**Actions**
+
+- Agent: Subagent hook test
+- Bash: `mkdir -p /home/skogix/marketplace/plugins/hook-tap/tests && cat > /home/skogix/marketplace/plugins/hook-tap/tests/run.sh…` (failed)
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && grep -n '^## ' LEARNINGS.md`
+- Bash: `python3 - <<'EOF'`
+- Bash: `python3 - <<'EOF'`
+

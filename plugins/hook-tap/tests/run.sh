@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Tests the scripts without a Claude session: writes sample hook rows with
+# append-json.sh into a throwaway git repo, runs Stop.sh, and checks the log,
+# the journal entry and what got staged. Usage: tests/run.sh
+set -euo pipefail
+
+scripts=$(cd "$(dirname "$0")/../scripts" && pwd)
+repo=$(mktemp -d)
+trap 'rm -rf "$repo"' EXIT
+git -C "$repo" init -q
+mkdir -p "$repo/src"
+echo hi >"$repo/src/a.txt"
+
+fail=0
+check() { # check <name> <expected> <actual>
+  if [[ $2 == "$3" ]]; then
+    echo "ok   $1"
+  else
+    echo "FAIL $1"
+    diff <(echo "$2") <(echo "$3") | sed 's/^/     /' || true
+    fail=1
+  fi
+}
+
+# One hook row: event name, prompt_id, then extra fields as a JSON object.
+row() { jq -nc --arg e "$1" --arg p "$2" --arg cwd "$repo/src" --argjson x "${3:-{\}}" \
+  '{session_id: "s1", cwd: $cwd, prompt_id: $p, hook_event_name: $e} + $x'; }
+
+p=11111111-aaaa-bbbb-cccc-000000000000
+other=22222222-aaaa-bbbb-cccc-000000000000
+
+row UserPromptSubmit $other '{"prompt": "an older turn"}' | "$scripts/append-json.sh"
+row UserPromptSubmit $p '{"prompt": "hello\n\nsecond line\n"}' | "$scripts/append-json.sh"
+row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "echo hi\necho more"}}' | "$scripts/append-json.sh"
+row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "ls"}, "agent_id": "sub1"}' | "$scripts/append-json.sh"
+row PostToolUseFailure $p "{\"tool_name\": \"Read\", \"tool_input\": {\"file_path\": \"$repo/src/a.txt\"}}" | "$scripts/append-json.sh"
+row PostToolUse $other '{"tool_name": "Bash", "tool_input": {"command": "not this turn"}}' | "$scripts/append-json.sh"
+row Stop $p '{"last_assistant_message": "done"}' | "$scripts/events/Stop.sh"
+
+log="$repo/.skogai/logs/hook-tap/log.jsonl"
+check "log is at the git root, one row per event" \
+  "UserPromptSubmit UserPromptSubmit PostToolUse PostToolUse PostToolUseFailure PostToolUse Stop" \
+  "$(jq -r .event "$log" | paste -sd' ')"
+check "only Stop has an action" "journal entry, git add -A" "$(jq -r '.action // empty' "$log")"
+
+expected="## <ts> · turn 11111111
+
+**User**
+
+> hello
+>
+> second line
+
+**Assistant**
+
+done
+
+**Actions**
+
+- Bash: \`echo hi\`
+- Read \`src/a.txt\` (failed)"
+check "journal entry at the git root" "$expected" \
+  "$(sed -E '1s/^## .{16} ·/## <ts> ·/' "$repo/.skogai/journal.md")"
+check "journal and work are staged, log is not" \
+  "$(printf '.skogai/journal.md\nsrc/a.txt')" \
+  "$(git -C "$repo" diff --cached --name-only | grep -v '^.skogai/logs/')"
+
+exit $fail

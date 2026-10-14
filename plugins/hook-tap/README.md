@@ -19,6 +19,12 @@ The scripts need `bash`, `jq`, `git` and `flock`. Check the plugin without a ses
 claude plugin validate plugins/hook-tap
 ```
 
+Test the scripts without a session (needs nothing but the tools above):
+
+```sh
+plugins/hook-tap/tests/run.sh
+```
+
 Tail the log while you use Claude:
 
 ```sh
@@ -33,6 +39,7 @@ hooks/hooks.json             the events we act upon, plus the status-line module
 hooks/register.ts            the status-line mod: shows the log's last event
 scripts/events/<Event>.sh    one script per event, run with the event's JSON on stdin
 scripts/append-json.sh       appends one row to the log: <json> | append-json.sh [action]
+tests/run.sh                 tests the scripts in a throwaway git repo
 ```
 
 ## Acting upon another event
