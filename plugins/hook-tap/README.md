@@ -3,7 +3,7 @@
 A function-hooks mod for Claude Code, built to learn how hooks fire. It does two things:
 
 - **Status line:** shows `hook: <stage>` for the last event it saw.
-- **Log:** appends one JSON line per event to `plugins/hook-tap/log.jsonl`, relative to the session's working directory:
+- **Log:** appends one JSON line per event to `.skogai/logs/hook-tap/log.jsonl`, relative to the session's working directory:
 
   ```json
   {"ts":"2026-10-04T18:00:00.000Z","stage":"tool.call","event":{...the event's input...}}
@@ -29,7 +29,7 @@ claude plugin validate plugins/hook-tap
 Tail the log while you use Claude:
 
 ```sh
-tail -f plugins/hook-tap/log.jsonl | jq -c '{stage, event}'
+tail -f .skogai/logs/hook-tap/log.jsonl | jq -c '{stage, event}'
 ```
 
 ## Files
