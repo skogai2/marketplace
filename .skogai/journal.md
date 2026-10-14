@@ -415,3 +415,64 @@ I left `## Context` and the empty `.skogai/CLAUDE.md` as they are, since both we
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap && sed -i 's#^- Steps 1 and 2 are built: `hooks/register.ts` runs them on `…`
 - Bash: `cd /home/skogix/marketplace && pwd`
 
+## 2026-10-14 12:07 · turn 6498d54e
+
+**User**
+
+> now this is the last "example input from the git logs":
+>
+> ```
+> Almost everything the journal says was done is in the diff. I found two loose ends and one claim that was never corrected.
+>
+> ## Done as stated
+>
+> | Turn                | Proposed or claimed                                                          | In diff?                                    |
+> | ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
+> | e42aaa7f            | `# Context` becomes `## Context`                                             | ✅ line 315                                 |
+> | e42aaa7f            | Fix the broken `@` link                                                      | ✅ replaced by the plain link from e102d098 |
+> | e102d098 / d11456f6 | `FEATURES.md` at the plugin root, plain link to the details file             | ✅ line 356                                 |
+> | d11456f6            | The `CLAUDE.md` next to `FEATURES.md` imports `@FEATURES.md` (your override) | ✅ line 332                                 |
+> | d11456f6            | Empty `.skogai/CLAUDE.md` kept and still imported                            | ✅ `e69de29` is the empty blob; line 333    |
+> | e8cfb683            | Point 1: the row names `turn.complete` and `git add -A`                      | ✅ line 356                                 |
+> | e8cfb683            | Point 2: "at the git root … the root `CLAUDE.md`"                            | ✅ line 319                                 |
+> | e8cfb683            | Point 3: `## Status` section                                                 | ✅ lines 321–324                            |
+> | e8cfb683            | `DIFF-AS-CONTEXT.md` line 17 updated                                         | ✅ line 343                                 |
+> | e8cfb683            | "Four changes in three files"                                                | ✅                                          |
+> | e8cfb683            | Leave `## Context` and the empty file alone                                  | ✅                                          |
+>
+> ## Gaps
+>
+> 1. **`DIFF-AS-CONTEXT.md` line 343 was already out of date when it was written.** It says the row "has since been rewritten by the user". In that same turn, Claude edited the row to add the trigger and `git add -A`. It should say something like "rewritten by the user, then amended with the trigger".
+> 2. **What turn 2dab9311 left out on purpose is now missing.** That turn said there would be "no automatic commits" and "no mid-session diff injection". Neither made it into `diff-as-handover.md`. Only `DIFF-AS-CONTEXT.md` (line 344) still covers the first one.
+> 3. **The truncated actions were called "fair" but nothing changed.** Turn e8cfb683 records the Python heredoc as only its first line (line 298), so the edit that made most of this turn's changes can't be seen in the journal. The fix belongs in `register.ts`, which isn't in the diff, so the gap is still open.
+>
+> ## A claim nobody corrected
+>
+> In turn 960f0e85, Claude said "The journal starts mid-session … everything before 11:05 is missing". The hunk header `@@ -122,3` shows the journal already had about 124 lines in `origin/master`. So the earlier entries were probably committed, not missing. That's the same "outside the diff" situation Claude used to explain `DIFF-AS-CONTEXT.md` in the very same reply. Check it before you squash.
+>
+> ## Can't be checked from the diff alone
+>
+> - **Root `CLAUDE.md` importing `.skogai/tmp/`:** step 3 now says "which the root `CLAUDE.md` imports", but the root `CLAUDE.md` isn't in the diff.
+> - **"Known problems" section:** `## Status` links to this section in `DIFF-AS-CONTEXT.md`, and it isn't in the diff either.
+> - **Who made the `## Context` change:** it happened between turns e42aaa7f and 960f0e85, and no turn's actions record it. It was either your edit or part of the truncated `sed`.
+>
+> The design-only steps 1 and 2 still say "at the git root", but `## Status` qualifies them, so that's consistent. The gap I'd fix before the real commit is #1.
+> ```
+>
+> at this stage this is nothing i would pay to much attention to. but if you see some last-minute changes needing to be done please do them now.
+
+**Assistant**
+
+I made two small fixes and staged them:
+
+- **Gap 1:** `DIFF-AS-CONTEXT.md` line 17 now says the row was "rewritten by the user, then amended by Claude to name the trigger and `git add -A`".
+- **Gap 2:** `diff-as-handover.md` gets a `## Left out on purpose` section: no automatic commits, and no mid-session diff injection.
+
+What I left alone:
+- **Gap 3 (truncated actions):** that fix belongs in `register.ts`, and the plan is to replace that code with a script anyway. It's not worth touching now.
+- **"A claim nobody corrected":** my claim was correct. The journal in `origin/master` starts at `## 2026-10-14 11:05 · turn e3c69c6c`, so everything before the reload really isn't there. The reviewer couldn't see that from the diff alone.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
+

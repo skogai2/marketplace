@@ -13,3 +13,7 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 - Steps 1 and 2 are built: `hooks/register.ts` runs them on `turn.complete`. They use the session's working directory, not the git root yet (see `DIFF-AS-CONTEXT.md`, "Known problems").
 - Step 3 is not built yet. Nothing writes `.skogai/tmp/git-diff` or `.skogai/tmp/git-diff-cached`.
 
+## Left out on purpose
+
+- No automatic commits until the staging can be trusted.
+- No mid-session diff injection.
