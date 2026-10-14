@@ -521,3 +521,56 @@ Send any message after that and I'll check the `Stop` row and the journal entry 
 
 - Bash: `tail -n 8 .skogai/logs/hook-tap/log.jsonl | jq -c '{ts, event, action, tool: .input.tool_name, pid: (.input.prompt_id //…`
 
+## 2026-10-14 15:32 · turn 03905a5b
+
+**User**
+
+> it looked good from my end and i commited the changes in the journal manually on my turn
+
+**Assistant**
+
+It checks out from my side too. Turn `f56f929e` logged `UserPromptSubmit`, `PreToolUse`, `PostToolUse` and then `Stop` with its action. The journal entry you committed in `ea9486b` has the prompt, the reply and the one Bash action, at the git root. `/reload-plugins` was enough to switch to 0.5.0 without restarting.
+
+I recorded the live check in `LEARNINGS.md` and changed `status-line.md` from "not checked" to checked. Both edits, plus this turn's journal entry, will be staged when this turn ends.
+
+**Small things the live run showed:**
+- **Actions show the shell command, not the file path.** Bash actions are cut at 120 characters, and because I edit with Bash heredocs, the journal shows a truncated `python3 - <<'EOF'` instead of which files changed. The staged diff still shows the changes themselves.
+- **The root log still has old 0.4.0 rows** above the new ones. They do no harm, but `rm .skogai/logs/hook-tap/log.jsonl` would start it clean.
+
+**Actions**
+
+- Bash: `git log --oneline -2; git show HEAD --stat | tail -3; git show HEAD -- .skogai/journal.md | grep '^+' | tail -25; grep -…`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
+
+## 2026-10-14 15:34 · turn 59a40837
+
+**User**
+
+> great! i have reset the log.jsonl files. anything else we can to for testing or documentation purposes as is?
+
+**Assistant**
+
+I tested one more path just now: a failing Bash command logged `PostToolUseFailure`. So this turn's journal entry should mark that action `(failed)`, which you can check in the staged diff.
+
+Here's what's left, in the order I'd do it:
+
+**Testing**
+1. **A script test you can rerun.** A `tests/run.sh` would pipe sample hook JSON into `Stop.sh` inside a temporary git repo and compare the journal entry with the expected text. It needs no Claude session and checks the part most likely to break: prompt matching, actions, `(failed)`, and skipping subagent rows. It's about 30 lines and I'd do this first.
+2. **Events not seen live yet:**
+   - `SubagentStart`/`SubagentStop`: one subagent call would show them, and also check that subagent tool uses stay out of the journal.
+   - `PreCompact`/`PostCompact`: run `/compact`.
+   - `Notification`: shows up on a permission prompt.
+   - `StopFailure`: needs an API error, so we just wait for one.
+3. **Rewind:** run `/rewind` once to see the known problem where a rewound turn gets journaled twice, then record what actually happens.
+
+**Documentation**
+4. **Clean up `LEARNINGS.md`.** The sections "Headless check (done)", "Not done yet" and "Filling in the rest of the events" describe the 0.4.0 mod. Some of it is out of date: the interactive run has been done now, and those events aren't logged anymore. I'd move them under a "0.4.0: the all-events mod" heading, mark them as history, and keep the validator and `$.fs` notes, which still apply to the status-line mod.
+5. **Spell out the log format.** `event-log.md` shows one example row. A short table of the fields (`ts`, `event`, `action`, `input`), and which `input` fields `Stop.sh` depends on (`prompt_id`, `agent_id`, `last_assistant_message`, `cwd`), would make it a contract that scripts can rely on.
+
+Should I do 1 and 4 now? 2 needs you to confirm the subagent call and run `/compact` yourself.
+
+**Actions**
+
+- Bash: `ls /home/skogix/marketplace/no-such-file` (failed)
+- Bash: `cd /home/skogix/marketplace && jq -c '{event, tool: .input.tool_name, pid: (.input.prompt_id // "" | .[:8])}' .skogai/lo…`
+

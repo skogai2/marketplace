@@ -13,7 +13,7 @@ The status line is the only part that is a mod, because only a mod can call `$.u
 ## Status
 
 - Built in 0.5.0.
-- Not checked yet in an interactive session (headless has no surface, see `LEARNINGS.md`).
+- Checked in an interactive session after `/reload-plugins`.
 
 ## Left out on purpose
 
