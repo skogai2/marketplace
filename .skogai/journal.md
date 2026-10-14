@@ -609,3 +609,27 @@ Once you've run `/compact`, I'll check the `PreCompact` and `PostCompact` rows a
 - Bash: `python3 - <<'EOF'`
 - Bash: `python3 - <<'EOF'`
 
+## 2026-10-14 15:40 · turn 0578e46f
+
+**User**
+
+> we have now compacted the session and pre/post compact should have ran i believe
+
+**Assistant**
+
+Yes, both ran. The `/compact` wrote three rows to the root log, in this order:
+
+- `PreCompact`, with `trigger: "manual"`.
+- `SessionStart`, with `source: "compact"`.
+- `PostCompact`, which includes the `compact_summary`.
+
+`Notification` also showed up about a minute after the turn ended, as `idle_prompt` ("Claude is waiting for your input"). So `StopFailure` is now the only event not seen live, and it needs an API error to end a turn.
+
+I updated `LEARNINGS.md` with a "Compact, seen live" section and shortened its "Not done yet" list to `StopFailure` and the `claude plugin test` file. I also updated the status line in `event-log.md`. Validation passes; the warning shown is the known informational one about the status-line hook. `Stop.sh` will stage both doc changes when this turn ends.
+
+**Actions**
+
+- Bash: `grep -E '"event":"(PreCompact|PostCompact|SessionStart|Notification|StopFailure)"' .skogai/logs/hook-tap/log.jsonl | jq …`
+- Bash: `grep '"event":"Notification"' .skogai/logs/hook-tap/log.jsonl | jq -c '.input|{message,notification_type}'; grep -n -A8 …`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap && python3 - <<'EOF'`
+

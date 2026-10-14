@@ -49,9 +49,14 @@ The plugin started as a way to act upon what Claude Code calls hooks, and drifte
 - **Subagent check:** one Explore subagent logged `SubagentStart`, its `PreToolUse`/`PostToolUse` rows with `agent_id` and `agent_type`, and `SubagentStop`. Those rows share the parent's `prompt_id`, which is why `Stop.sh` must filter out rows with `agent_id`. Subagent tool calls include the hand-back tool (`SubagentHandback`).
 - **`tests/run.sh` tests the scripts without a session.** It writes sample rows with `append-json.sh` into a throwaway repo, runs `Stop.sh`, and checks the log, the journal entry and what got staged.
 
+### Compact, seen live
+
+- `/compact` logs `PreCompact` (`trigger: "manual"`, `custom_instructions`), then `SessionStart` with `source: "compact"`, then `PostCompact` (`compact_summary`). All three carry a `prompt_id`.
+- `Notification` fired with `notification_type: "idle_prompt"` about a minute after the turn ended.
+
 ### Not done yet
 
-- **`PreCompact`, `PostCompact`, `Notification` and `StopFailure`** haven't been seen live yet.
+- **`StopFailure`** hasn't been seen live yet (it needs an API error to end a turn).
 - **`claude plugin test`** for the status-line mod needs a `*.test.ts` file. The test kit's API is in `docs/plugins/mods/test.md`.
 
 ## History: 0.4.0, the all-events mod

@@ -32,7 +32,7 @@ hook-tap exists to act upon events. The log is the record of every time it did, 
 
 ## Status
 
-- Built in 0.5.0: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Notification`, `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`, `Stop`, `StopFailure`, `SessionEnd`. All but `Stop` only log. Every event except `PreCompact`, `PostCompact`, `Notification` and `StopFailure` has been seen live.
+- Built in 0.5.0: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `Notification`, `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`, `Stop`, `StopFailure`, `SessionEnd`. All but `Stop` only log. Every event except `StopFailure` has been seen live.
 - `tests/run.sh` checks the row format without a session.
 
 ## Left out on purpose
