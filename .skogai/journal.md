@@ -709,3 +709,53 @@ To turn a switch on, set it in the environment you start Claude from, or under `
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap/scripts`
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
 
+## 2026-10-15 22:59 · turn 599c53a1
+
+**User**
+
+> let all be default off i believe is most sane right? and simply adding `wt step commit` as well as merge would be the simplest solution as well? :)
+
+**Assistant**
+
+Yes, off by default is the sanest choice. All the switches now default to off, and `wt step commit` is in as a third step. Each step has its own variable for each event (`<EVENT>` is `STOP` or `USER_PROMPT_SUBMIT`):
+
+| Variable | Runs |
+|---|---|
+| `SKOGAI_STAGE_ON_<EVENT>` | `git add -A` |
+| `SKOGAI_COMMIT_ON_<EVENT>` | `wt step commit` |
+| `SKOGAI_MERGE_ON_<EVENT>` | `wt merge --no-remove` |
+
+When more than one is set to `true`, they run in that order: stage, commit, merge.
+
+- **Behaviour change:** with nothing set, `Stop` no longer stages anything. It only writes the journal entry.
+- **Commit:** it's skipped when the tree is clean, so you won't get empty commits or `(failed)` noise in the log. `wt step commit` also stages everything itself by default, so `COMMIT` works without `STAGE`.
+- **Testing:** in a throwaway repo, `Stop` with nothing set only wrote the journal entry and staged nothing. With `SKOGAI_COMMIT_ON_STOP=true` it made one commit with a generated message. `claude plugin validate` passes, with warnings.
+
+I updated `FEATURES.md` and `.skogai/features/diff-as-handover.md` to match. Nothing is committed.
+
+**Actions**
+
+- Bash: `wt step commit --help 2>&1 | head -30`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
+
+## 2026-10-15 23:00 · turn 54fd3dc5
+
+**User**
+
+> this is also set via mise globally from now on / to start:
+>
+> SKOGAI_STAGE_ON_STOP=false
+> SKOGAI_MERGE_ON_USER_PROMPT_SUBMIT=false
+> SKOGAI_CLAUDE_CODE_DOCS_DIR=/home/skogix/tmp/docs
+> SKOGAI_COMMIT_ON_STOP=false
+> SKOGAI_STAGE_ON_USER_PROMPT_SUBMIT=false
+> SKOGAI_COMMIT_ON_USER_PROMPT_SUBMIT=false
+> SKOGAI_MERGE_ON_STOP=false
+
+**Assistant**
+
+That works with what we built: every switch is set to `false`, so turns only write the journal entry. Two things to know:
+
+- **Restart needed:** hooks inherit their environment from the `claude` process. After you flip a switch in mise, start a new session in a shell where mise has loaded it.
+- **Docs dir:** nothing in hook-tap reads `SKOGAI_CLAUDE_CODE_DOCS_DIR` yet. If you want something to use it, such as the `docs/` sync, tell me where.
+

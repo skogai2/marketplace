@@ -5,26 +5,25 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 ## Context
 
 1. **Record.** At the end of each turn, append the user's prompt, Claude's reply and the actions taken to `.skogai/journal.md` at the git root.
-2. **Stage.** Then run `git add -A` from the git root. Nothing commits automatically; the user reviews with `git diff --cached` and commits, usually as `WIP`.
+2. **Stage.** Then, if switched on, run `git add -A` from the git root. Nothing commits unless that is switched on too; otherwise the user reviews with `git diff --cached` and commits, usually as `WIP`.
 3. **Hand over.** At session start, write `git diff` and `git diff --cached` to `.skogai/tmp/` at the git root, which the root `CLAUDE.md` imports. A new session then starts with the uncommitted state already in context.
 
 ## Status
 
-- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
+- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ON_STOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
-- Git steps are switched by env vars, read by `scripts/git-steps.sh` (stage runs before merge):
+- Git steps are switched by env vars, read by `scripts/git-steps.sh`. All are off unless set to `true`, and run in table order:
 
-  | Variable | Event | Runs | Default |
-  |---|---|---|---|
-  | `SKOGAI_STAGE_ON_STOP` | `Stop` | `git add -A` | `true` |
-  | `SKOGAI_MERGE_ON_STOP` | `Stop` | `wt merge --no-remove` | off |
-  | `SKOGAI_STAGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` | `git add -A` | off |
-  | `SKOGAI_MERGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` | `wt merge --no-remove` | off |
+  | Variable (`<EVENT>` is `STOP` or `USER_PROMPT_SUBMIT`) | Runs |
+  |---|---|
+  | `SKOGAI_STAGE_ON_<EVENT>` | `git add -A` |
+  | `SKOGAI_COMMIT_ON_<EVENT>` | `wt step commit`, skipped when the tree is clean |
+  | `SKOGAI_MERGE_ON_<EVENT>` | `wt merge --no-remove` |
 
-  Only the value `true` switches a step on. A failed `wt merge` is logged as `wt merge (failed)` and doesn't fail the hook.
+  A failed `wt` step is logged with `(failed)` and doesn't fail the hook.
 - Step 3 is not built yet. Nothing writes `.skogai/tmp/git-diff` or `.skogai/tmp/git-diff-cached`.
 
 ## Left out on purpose
 
-- No automatic commits until the staging can be trusted.
+- No automatic commits unless switched on.
 - No mid-session diff injection.
