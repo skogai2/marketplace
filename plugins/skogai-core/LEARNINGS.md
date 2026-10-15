@@ -1,4 +1,4 @@
-# Learnings: building hook-tap
+# Learnings: building skogai-core
 
 Notes from the first mod. Each entry records what we found, where it came from, and what it means for the next plugin. Keep appending as we learn more; this is the seed for a larger hooks-and-plugins project.
 
@@ -65,7 +65,7 @@ The plugin started as a way to act upon what Claude Code calls hooks, and drifte
 
 ### Headless check
 
-`claude -p "reply with just OK" --plugin-dir plugins/hook-tap` wrote six lines: `session.start`, `prompt.compose`, `prompt.submit`, `turn.start`, `turn.complete`, `session.end`. The model answered `OK`.
+`claude -p "reply with just OK" --plugin-dir plugins/skogai-core` wrote six lines: `session.start`, `prompt.compose`, `prompt.submit`, `turn.start`, `turn.complete`, `session.end`. The model answered `OK`.
 
 - **Order is what you'd expect:** the session opens, the system prompt is composed, the prompt is submitted, the turn runs, then the session ends.
 - **`tool.call` did not fire** because the reply used no tools. A prompt that runs Bash should produce `tool.call` lines.

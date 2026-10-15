@@ -14,7 +14,7 @@ if ! root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null); then
   exec "$here/../append-json.sh" <<<"$input"
 fi
 
-log="$root/.skogai/logs/hook-tap/log.jsonl"
+log="$root/.skogai/logs/skogai-core/log.jsonl"
 journal="$root/.skogai/journal.md"
 prompt_id=$(jq -r '.prompt_id // empty' <<<"$input")
 

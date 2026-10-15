@@ -7,7 +7,7 @@ input=$(cat)
 cwd=$(jq -r '.cwd // empty' <<<"$input")
 cwd=${cwd:-$PWD}
 root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
-log="$root/.skogai/logs/hook-tap/log.jsonl"
+log="$root/.skogai/logs/skogai-core/log.jsonl"
 mkdir -p "$(dirname "$log")"
 
 # Hooks can fire in parallel (PreToolUse for parallel tool calls), so hold a

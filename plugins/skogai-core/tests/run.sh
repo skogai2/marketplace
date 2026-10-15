@@ -37,7 +37,7 @@ row PostToolUseFailure $p "{\"tool_name\": \"Read\", \"tool_input\": {\"file_pat
 row PostToolUse $other '{"tool_name": "Bash", "tool_input": {"command": "not this turn"}}' | "$scripts/append-json.sh"
 row Stop $p '{"last_assistant_message": "done"}' | "$scripts/events/Stop.sh"
 
-log="$repo/.skogai/logs/hook-tap/log.jsonl"
+log="$repo/.skogai/logs/skogai-core/log.jsonl"
 check "log is at the git root, one row per event" \
   "UserPromptSubmit UserPromptSubmit PostToolUse PostToolUse PostToolUseFailure PostToolUse Stop" \
   "$(jq -r .event "$log" | paste -sd' ')"

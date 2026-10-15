@@ -1,8 +1,8 @@
-# hook-tap
+# skogai-core
 
 A Claude Code plugin for acting upon hook events. Each event we act upon has its own script, every action is logged, and the status line shows the event being acted upon. What it does and why is in [FEATURES.md](FEATURES.md):
 
-- **Event log:** one JSON row per event we act upon in `.skogai/logs/hook-tap/log.jsonl` at the git root.
+- **Event log:** one JSON row per event we act upon in `.skogai/logs/skogai-core/log.jsonl` at the git root.
 - **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root and runs `git add -A`. Nothing is committed automatically.
 - **Status line:** shows `hook: <event>` from the log's last row.
 
@@ -10,25 +10,25 @@ A Claude Code plugin for acting upon hook events. Each event we act upon has its
 
 ```sh
 cd ~/marketplace
-claude --plugin-dir plugins/hook-tap
+claude --plugin-dir plugins/skogai-core
 ```
 
 The scripts need `bash`, `jq`, `git` and `flock`. Check the plugin without a session:
 
 ```sh
-claude plugin validate plugins/hook-tap
+claude plugin validate plugins/skogai-core
 ```
 
 Test the scripts without a session (needs nothing but the tools above):
 
 ```sh
-plugins/hook-tap/tests/run.sh
+plugins/skogai-core/tests/run.sh
 ```
 
 Tail the log while you use Claude:
 
 ```sh
-tail -f .skogai/logs/hook-tap/log.jsonl | jq -c '{event, action}'
+tail -f .skogai/logs/skogai-core/log.jsonl | jq -c '{event, action}'
 ```
 
 ## Files

@@ -4,7 +4,7 @@ Shows the event we are acting upon, as `hook: <event>`.
 
 ## Why
 
-hook-tap exists to act upon events. The status line shows which one we're acting on right now.
+skogai-core exists to act upon events. The status line shows which one we're acting on right now.
 
 ## How
 

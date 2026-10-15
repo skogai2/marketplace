@@ -10,9 +10,9 @@
   },
   "plugins": [
     {
-      "name": "hook-tap",
-      "source": "hook-tap",
-      "description": "Shows the current hook stage in the status line and appends each event's input to log.jsonl, for learning how hooks fire."
+      "name": "skogai-core",
+      "source": "skogai-core",
+      "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
     },
     {
       "name": "loadout",

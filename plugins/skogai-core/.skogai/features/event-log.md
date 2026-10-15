@@ -1,6 +1,6 @@
 # Event log
 
-One row in `.skogai/logs/hook-tap/log.jsonl` at the git root for each event we act upon, and what we did:
+One row in `.skogai/logs/skogai-core/log.jsonl` at the git root for each event we act upon, and what we did:
 
 ```json
 {"ts":"2026-10-14T12:56:01.123Z","event":"Stop","action":"journal entry, git add -A","input":{...the hook's stdin JSON...}}
@@ -22,7 +22,7 @@ Other features read these `input` fields, so they must stay in the log:
 
 ## Why
 
-hook-tap exists to act upon events. The log is the record of every time it did, and the source the other features read from: the status line shows its last row, and the journal finds a turn's prompt and tool uses in it.
+skogai-core exists to act upon events. The log is the record of every time it did, and the source the other features read from: the status line shows its last row, and the journal finds a turn's prompt and tool uses in it.
 
 ## How
 

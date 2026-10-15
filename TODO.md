@@ -18,8 +18,8 @@ Manual steps from CLAUDE.md that could be enforced instead of remembered.
 
 - [ ] Move the `loadout` submodule from `projects/loadout` to `plugins/loadout` (`git mv` + `.gitmodules`); it currently shows as deleted in the working tree.
 - [ ] Review `plugin-skills/` (`plugin-structure`, `plugin-settings`): merge into or add as marketplace plugins; drop or rewrite `plugin-structure/references/marketplace-repo-conventions.md`, which describes a different repo.
-- [ ] Update the hook-tap README: log path is `.skogai/logs/hook-tap/log.jsonl` (not `plugins/hook-tap/log.jsonl`), and it still mentions `~/skogai-fleet`.
-- [ ] Add a `*.test.ts` for hook-tap so `claude plugin test` has something to run.
+- [ ] Update the skogai-core README: log path is `.skogai/logs/skogai-core/log.jsonl` (not `plugins/skogai-core/log.jsonl`), and it still mentions `~/skogai-fleet`.
+- [ ] Add a `*.test.ts` for skogai-core so `claude plugin test` has something to run.
 
 ## User input
 

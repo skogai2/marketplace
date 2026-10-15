@@ -3,7 +3,7 @@ import type { Register } from 'claude-code'
 // The plain hooks in hooks.json do the acting, and each one writes a row to
 // the log with scripts/append-json.sh. This module only shows the event of
 // the log's last row in the status line.
-const LOG = '.skogai/logs/hook-tap/log.jsonl'
+const LOG = '.skogai/logs/skogai-core/log.jsonl'
 
 // The git root, found once per load. The scripts resolve the log against it
 // too, so both agree wherever the session's working directory is.
