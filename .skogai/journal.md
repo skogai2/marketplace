@@ -661,3 +661,51 @@ After the restart, it's worth checking that the new session's first rows are `Se
 - Bash: `git log --oneline -3 -- plugins/.skogai/journal.md; git check-ignore -v plugins/.skogai/journal.md; ls -la plugins/.skog…`
 - Bash: `git rm -q plugins/.skogai/journal.md && rm -r plugins/.skogai && git status --short`
 
+## 2026-10-15 22:53 · turn 9ca5b9b9
+
+**User**
+
+> hi claude! i do believe we are currently appending on Stop.sh. could we add a check if 
+>
+> $SKOGAI_MERGE_ON_TURN_STOP=true if true then run `wt merge`
+>
+> $SKOGAI_MERGE_ON_TURN_START=true if true then run `wt merge`
+>
+> $SKOGAI_COMMIT_ON_TURN_STOP=true `git add -A`
+>
+> $SKOGAI_COMMIT_ON_TURN_START=true `git add -A`
+>
+> or what the event-named-ENV's should be called to keep it sane :)
+
+**Assistant**
+
+I added the four switches. Each one is named for its hook event:
+
+| Variable | Hook | Runs | Default |
+|---|---|---|---|
+| `SKOGAI_STAGE_ON_STOP` | `Stop` (turn end) | `git add -A` | **`true`** |
+| `SKOGAI_MERGE_ON_STOP` | `Stop` | `wt merge --no-remove` | off |
+| `SKOGAI_STAGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` (turn start) | `git add -A` | off |
+| `SKOGAI_MERGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` | `wt merge --no-remove` | off |
+
+A few choices differ from what you sketched:
+- **`STAGE` instead of `COMMIT`.** `git add -A` only stages files, so `COMMIT` would be misleading. `wt merge` is the step that actually commits.
+- **Staging on `Stop` stays on by default.** That keeps today's behaviour. Set `SKOGAI_STAGE_ON_STOP=false` to turn it off.
+- **`--no-remove` on `wt merge`.** Plain `wt merge` deletes the worktree after merging, and that would pull it out from under the running session.
+- **Failures and output.** If a merge fails, the hook still succeeds and the log says `wt merge (failed)`. A merge from the default branch is one example that fails. `wt` prints to stderr so its output stays out of Claude's context.
+- **Order.** When both switches are on for an event, staging runs before the merge.
+
+The logic is in a new `scripts/git-steps.sh`, called from `Stop.sh` and `UserPromptSubmit.sh`. The table is also in `.skogai/features/diff-as-handover.md`.
+
+I tested it in a throwaway repo. Staging at turn start worked, and both events wrote the right log lines. The `Stop` merge failed as expected because that repo had no commits, so a successful `wt merge` is still untested. `claude plugin validate` passes, with warnings. Nothing is committed.
+
+To turn a switch on, set it in the environment you start Claude from, or under `env` in `settings.json`.
+
+**Actions**
+
+- Bash: `ls -R hooks* scripts* 2>/dev/null | head -50; cat hooks/hooks.json 2>/dev/null; grep -rl "Stop" --include=*.sh --include…`
+- Bash: `cd scripts; cat events/Stop.sh; echo ----; cat events/UserPromptSubmit.sh; echo ----; cat append-json.sh; echo ----; cat…`
+- Bash: `wt merge --help 2>&1 | head -60`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap/scripts`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
+

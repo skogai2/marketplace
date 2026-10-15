@@ -12,6 +12,16 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 - Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
+- Git steps are switched by env vars, read by `scripts/git-steps.sh` (stage runs before merge):
+
+  | Variable | Event | Runs | Default |
+  |---|---|---|---|
+  | `SKOGAI_STAGE_ON_STOP` | `Stop` | `git add -A` | `true` |
+  | `SKOGAI_MERGE_ON_STOP` | `Stop` | `wt merge --no-remove` | off |
+  | `SKOGAI_STAGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` | `git add -A` | off |
+  | `SKOGAI_MERGE_ON_USER_PROMPT_SUBMIT` | `UserPromptSubmit` | `wt merge --no-remove` | off |
+
+  Only the value `true` switches a step on. A failed `wt merge` is logged as `wt merge (failed)` and doesn't fail the hook.
 - Step 3 is not built yet. Nothing writes `.skogai/tmp/git-diff` or `.skogai/tmp/git-diff-cached`.
 
 ## Left out on purpose
