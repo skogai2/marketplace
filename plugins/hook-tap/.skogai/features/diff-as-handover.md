@@ -6,7 +6,7 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 1. **Record.** At the end of each turn, append the user's prompt, Claude's reply and the actions taken to `.skogai/journal.md` at the git root.
 2. **Stage.** Then, if switched on, run `git add -A` from the git root. Nothing commits unless that is switched on too; otherwise the user reviews with `git diff --cached` and commits, usually as `WIP`.
-3. **Hand over.** At session start, write `git diff` and `git diff --cached` to `.skogai/tmp/` at the git root, which the root `CLAUDE.md` imports. A new session then starts with the uncommitted state already in context.
+3. **Hand over.** Write the current state as diff files to `.skogai/tmp/` at the git root: `git-diff`, `git-diff-cached` and `wt-step-diff` (`wt step diff`: everything since branching from the default branch, untracked files included). Later, these go into context so a new session or turn starts with the state already known.
 
 ## Status
 
@@ -21,7 +21,7 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
   | `SKOGAI_MERGE_ON_<EVENT>` | `wt merge --no-remove` |
 
   A failed `wt` step is logged with `(failed)` and doesn't fail the hook.
-- Step 3 is not built yet. Nothing writes `.skogai/tmp/git-diff` or `.skogai/tmp/git-diff-cached`.
+- Step 3 is half built: `scripts/write-state.sh` overwrites the three files on `SessionStart`, and on `UserPromptSubmit` and `Stop` after the git steps. `.skogai/tmp/` holds a `.gitignore` of `*`, so staging never picks the files up. Without `wt`, `wt-step-diff` is left empty. Nothing feeds the files into context yet.
 
 ## Left out on purpose
 

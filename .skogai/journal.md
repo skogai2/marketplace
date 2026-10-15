@@ -759,3 +759,74 @@ That works with what we built: every switch is set to `false`, so turns only wri
 - **Restart needed:** hooks inherit their environment from the `claude` process. After you flip a switch in mise, start a new session in a shell where mise has loaded it.
 - **Docs dir:** nothing in hook-tap reads `SKOGAI_CLAUDE_CODE_DOCS_DIR` yet. If you want something to use it, such as the `docs/` sync, tell me where.
 
+## 2026-10-15 23:05 · turn d9256078
+
+**User**
+
+> now in preparation for eventual next steps i want to preload some intention from my end:
+>
+> this will essentially let us keep a message exchange back and forth with each side staging and things commiting automatically
+>
+> the end goal is essentially "save something like `wt step diff origin/master > /tmp/diff/big-diff`" and git diff + git diff --cached to show changes made to the other party each turn together with the message sent (also the message appended in the journal+the actual changes commited will be a git-diff-bundle with intent+change per commit essentially)
+>
+> for example @/tmp/diff/big-diff might show a change i have made and it hopefully would share some extra context like mentioned in @DIFF-AS-CONTEXT.md itself
+
+**Assistant**
+
+I've written your intention into `DIFF-AS-CONTEXT.md` as a new **Goal** section. It describes each turn being staged and committed automatically, so each commit is one turn's message plus its change. The other side then gets the message, `git diff` and `git diff --cached`, and a big diff from `wt step diff origin/master` (that command exists and covers everything since branching).
+
+I also updated the rest of that file:
+- **Current state** was stale. It now lists the env switches, all off and set through mise, and says nothing writes or injects the diffs yet.
+- **Directions** has a new open question: whether the big diff should live in `/tmp/diff/`, shared across sessions, or in the per-repo `.skogai/tmp/` that diff-as-handover already plans to use.
+
+Your example worked. `/tmp/diff/big-diff` showed me your one-line edit to this doc ("not signed off" → "goal of being implemented in the long term"), so I got the change and the reason for it together.
+
+One existing known problem in that file goes away once `SKOGAI_COMMIT_ON_STOP=true`: today your diff only shows your own changes if you commit my staged turn first, otherwise both turns mix in one diff. With that switch on, my turn gets committed automatically. I left the note in the file because all the switches are off for now.
+
+Nothing is committed.
+
+**Actions**
+
+- Bash: `wt step diff --help 2>&1 | head -15`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
+
+## 2026-10-15 23:09 · turn 268bf09f
+
+**User**
+
+> now some extra plus on the part of `wt step diff origin/master`. 
+>
+> 1. workspaces/workorders against master  
+> 2. new files are included since it goes on the actual git index i believe
+> 3. works perfectly with wt overall
+> etc etc
+>
+> would you like to prepare this and use the same ".skogai/logs/ or .skogai/tmp/" paths for simply outputting files that represent the current state to start?
+
+**Assistant**
+
+Done: the hooks now write three diff files to `.skogai/tmp/` at the git root, overwriting them each time. This always runs; there's no switch for it.
+
+| File | Source |
+|---|---|
+| `git-diff` | `git diff` |
+| `git-diff-cached` | `git diff --cached` |
+| `wt-step-diff` | `wt step diff`: everything since branching, including untracked files |
+
+- **When it runs:** on `SessionStart`, and on `UserPromptSubmit` and `Stop` after the git steps, so the files show the state each turn leaves behind. The log action reads `wrote .skogai/tmp`.
+- **Never staged:** `.skogai/tmp/` gets its own `.gitignore` containing `*`. That way, with staging on, you won't stage diffs of the diff files, and it works in any repo without touching the repo's `.gitignore`.
+- **Without `wt`:** `wt-step-diff` is left empty and the hook doesn't fail.
+- **Compared against local `master`, not `origin/master`:** that's what `wt step diff` uses when you give it no branch, and it matches what `wt merge` merges into. If you want the remote instead, it's a one-word change to `wt step diff origin/master`.
+- **Nothing reads the files yet.** Injecting them into context is still the undecided next step. Until then, use `@.skogai/tmp/wt-step-diff`.
+
+The new script is `scripts/write-state.sh`, called from `SessionStart.sh`, `UserPromptSubmit.sh` and `Stop.sh`.
+
+I tested it in a throwaway repo: all three events wrote the files, and with staging on, `.skogai/tmp/` stayed unstaged. `claude plugin validate` passes, with warnings. I updated `DIFF-AS-CONTEXT.md` and `diff-as-handover.md` (step 3 now says it's half built). Nothing is committed.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap; cat scripts/events/SessionStart.sh; echo ---; cat .gitignore .skogai/.giti…`
+- Bash: `cd /home/skogix/marketplace; wt step diff 2>&1 >/tmp/claude-1000/-home-skogix-marketplace-plugins-hook-tap/b8e17699-24ad…`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap/scripts`
+- Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
+

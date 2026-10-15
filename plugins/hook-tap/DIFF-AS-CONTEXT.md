@@ -1,6 +1,6 @@
 # Diff as context
 
-Concept notes for future work. Nothing here is signed off as a feature yet.
+Concept notes for future work. This is a concept with the goal of being implemented in the long term.
 
 ## The idea
 
@@ -12,10 +12,23 @@ Concept notes for future work. Nothing here is signed off as a feature yet.
 
 The staged diff then holds both sides: the journal hunk carries Claude's previous turn, and the other hunks carry the user's edits. Each commit is one complete round: what was asked, what was answered and why, and what changed.
 
+## Goal
+
+A message exchange where each side's turn is staged and committed automatically, so the history becomes a git-diff bundle: each commit is one turn's intent (the message, appended to the journal) plus its change.
+
+Each turn, the other party sees:
+
+- the message sent,
+- `git diff` and `git diff --cached`: what changed this turn,
+- `wt step diff`: everything since branching from the default branch (committed, staged, unstaged and untracked). It fits wt's model: each worktree is a work order against `master`, and new files show up without being added first.
+
+The diffs carry context on their own. A hunk that edits a doc like this one shows the change and the intent behind it together.
+
 ## Current state
 
-- hook-tap 0.5.0 writes the journal and runs `git add -A` on the plain `Stop` hook, from `scripts/events/Stop.sh`, at the git root. The implementation was not signed off. The features are listed in `FEATURES.md`, with details in `.skogai/features/diff-as-handover.md`.
-- Nothing commits automatically. Staging only, until the automation can be trusted.
+- `scripts/events/Stop.sh` writes the journal at the git root on every `Stop`.
+- Git steps are env switches, all off unless set to `true`, read by `scripts/git-steps.sh` on `Stop` and `UserPromptSubmit`: `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` run `git add -A`, `wt step commit` and `wt merge --no-remove`. The user sets them globally through mise, all `false` to start. Details in `.skogai/features/diff-as-handover.md`.
+- `scripts/write-state.sh` writes `git-diff`, `git-diff-cached` and `wt-step-diff` to `.skogai/tmp/` at the git root on `SessionStart`, `UserPromptSubmit` and `Stop`. The directory ignores itself. Nothing injects them into context yet.
 - The big `log.jsonl` stays globally gitignored, as the raw source.
 
 ## Known problems
@@ -25,4 +38,4 @@ The staged diff then holds both sides: the journal hunk carries Claude's previou
 
 ## Directions, not decided
 
-- Feed `git diff --cached` into context automatically on `UserPromptSubmit`, instead of typing `!git diff --cached`. Declined for now.
+- Feed the diffs into context automatically on `UserPromptSubmit`, instead of typing `!git diff --cached` or `@.skogai/tmp/wt-step-diff`. Declined for now; the goal above is where this leads.

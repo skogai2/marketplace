@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Stop: append the turn to .skogai/journal.md at the git root, run the git
-# steps switched on for turn end (see git-steps.sh), and log it. The prompt and the tool uses come
+# steps switched on for turn end (see git-steps.sh), write the resulting state
+# to .skogai/tmp/ (see write-state.sh), and log it. The prompt and the tool uses come
 # from this turn's rows in the log, matched by prompt_id.
 set -euo pipefail
 
@@ -47,4 +48,5 @@ jq -rn --argjson rows "$rows" --argjson stop "$input" --arg root "$root" \
   | join("\n\n") + "\n"' >>"$journal"
 
 ran=$("$here/../git-steps.sh" STOP "$root")
-exec "$here/../append-json.sh" "journal entry${ran:+, $ran}" <<<"$input"
+"$here/../write-state.sh" "$root"
+exec "$here/../append-json.sh" "journal entry${ran:+, $ran}, wrote .skogai/tmp" <<<"$input"
