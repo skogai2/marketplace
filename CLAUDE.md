@@ -10,7 +10,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 - Marketplace entries carry only `name`, `source`, `description`; `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
 - Some plugins are git submodules (see `.gitmodules`). Run `git submodule update --init` before touching them — uninitialized submodules are empty directories.
 - `docs/` is a synced snapshot of the Claude Code docs (date in `docs/synced-at.txt`). Treat it as the read-only reference for plugin/hook/marketplace APIs; never edit it.
-- `plugin-skills/` holds reference skills to review and, where useful, merge into or add as marketplace plugins. Its `plugin-structure/references/marketplace-repo-conventions.md` describes a different repo (root-level plugins, Makefile-generated `marketplace.json`, `external-repos.json`) — none of that applies here.
+- `plugin-skills/` holds reference skills to review and, where useful, merge into or add as marketplace plugins. `plugin-structure/references/marketplace-repo-conventions.md` documents this repo's conventions.
 
 ## Validating
 
