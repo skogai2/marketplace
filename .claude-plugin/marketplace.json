@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "0.0.64",
+  "version": "0.0.65",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -29,7 +29,7 @@
       "name": "loadout",
       "source": {
         "source": "url",
-        "url": "git@github.com:skogai2/loadout.git"
+        "url": "https://github.com/skogai2/loadout"
       },
       "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
     },
