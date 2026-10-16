@@ -3,7 +3,7 @@
 A Claude Code plugin for acting upon hook events. Each event we act upon has its own script, every action is logged, and the status line shows the event being acted upon. What it does and why is in [FEATURES.md](FEATURES.md):
 
 - **Event log:** one JSON row per event we act upon in `.skogai/logs/skogai-core/log.jsonl` at the git root.
-- **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root and runs `git add -A`. Nothing is committed automatically.
+- **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root. `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` switch on `git add -A`, `wt step commit` and `wt merge`; all are off unless set to `true`.
 - **Status line:** shows `hook: <event>` from the log's last row.
 
 ## Installing it
