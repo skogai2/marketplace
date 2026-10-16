@@ -1,35 +1,18 @@
 [
   {
-    "name": "skogai-nelson",
+    "name": "skogai-loadout",
     "source": "url",
-    "url": "git@github.com:skogai/nelson.git"
-  },
-  {
-    "name": "skogai-mattpocock",
-    "source": "url",
-    "url": "git@github.com:skogai/mattpocock-skills.git"
-  },
-  {
-    "name": "skogai-worktrunk",
-    "source": "github",
-    "repo": "skogai/worktrunk",
-    "path": "plugins/worktrunk"
-  },
-  {
-    "name": "skogai-routing",
-    "source": "url",
-    "url": "git@github.com:skogai/skogai-routing.git"
+    "url": "git@github.com:skogai2/loadout.git"
   },
   {
     "name": "codex-plugin-cc",
     "source": "github",
     "repo": "openai/codex-plugin-cc",
-    "path": "plugins/codex"
+    "path": "./plugins/codex"
   },
   {
-    "name": "skoghooks",
-    "source": "github",
-    "repo": "skogai/skoghooks",
-    "path": "plugins/skoghooks"
+    "name": "open-knowledge-plugin",
+    "source": "url",
+    "repo": "git@github.com:skogai2/open-knowledge-plugin.git"
   }
 ]

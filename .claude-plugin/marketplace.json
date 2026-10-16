@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "0.0.61",
+  "version": "0.0.62",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -13,6 +13,19 @@
     "jetbrains-router": null
   },
   "plugins": [
+    {
+      "name": "codex",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/openai/codex-plugin-cc.git",
+        "path": "./plugins/codex"
+      },
+      "version": "1.0.6",
+      "description": "Use Codex from Claude Code to review code or delegate tasks.",
+      "author": {
+        "name": "OpenAI"
+      }
+    },
     {
       "name": "loadout",
       "source": "./plugins/loadout",
@@ -26,13 +39,19 @@
       "repository": "https://github.com/MK27MK/loadout"
     },
     {
-      "name": "skogai-core",
-      "source": "./plugins/skogai-core",
-      "version": "0.6.0",
-      "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line.",
+      "name": "loadout",
+      "source": {
+        "source": "url",
+        "url": "git@github.com:skogai2/loadout.git"
+      },
+      "version": "0.3.0",
+      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element",
       "author": {
-        "name": "Emil Skogsund"
-      }
+        "name": "Mattia Carella"
+      },
+      "license": "MIT",
+      "homepage": "https://github.com/MK27MK/loadout",
+      "repository": "https://github.com/MK27MK/loadout"
     }
   ]
 }
