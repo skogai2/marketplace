@@ -830,3 +830,120 @@ I tested it in a throwaway repo: all three events wrote the files, and with stag
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap/scripts`
 - Bash: `cd /home/skogix/marketplace/plugins/hook-tap`
 
+## 2026-10-15 23:20 · turn 7b4d4191
+
+**User**
+
+
+
+**Assistant**
+
+Renamed `hook-tap` to **`skogai-core`** and committed it as `fab1052`. Plugin names can't contain `/`, so `skogai-core/events/hooks` wasn't an option. `skogai-core` leaves room for the plugin to keep growing.
+
+**In the repo:**
+- Moved `plugins/hook-tap` to `plugins/skogai-core` and updated the marketplace entry.
+- Bumped the plugin's version to 0.6.0.
+- Updated the marketplace description to match `plugin.json`; the old one was stale.
+- Changed the log path to `.skogai/logs/skogai-core/log.jsonl`, and updated the docs, `CLAUDE.md` and `TODO.md` to match.
+- Left `.skogai/journal.md` alone because it's history.
+
+**Outside the repo:**
+- In `~/.claude/settings.json`, the enabled entry is now `skogai-core@skogai-marketplace`.
+- In `~/.config/git/ignore`, the ignore line is now `**/.skogai/logs/skogai-core/`.
+- Merged the old log rows into the new log.
+
+**Checks:** `claude plugin validate` passes for the plugin and the marketplace, with the same warnings as before. `tests/run.sh` fails 2 cases ("only Stop has an action" and "journal and work are staged, log is not"). It failed the same way before the rename, so I didn't cause it, but it is broken.
+
+**Until you restart:** this session still runs the old hook-tap mod. It keeps writing to `.skogai/logs/hook-tap/`, and also to `docs/.skogai/logs/hook-tap/` (the bug where logs land in whatever directory the shell is in). Those files now show up as untracked, because I removed the hook-tap ignore line. After restarting and reinstalling `skogai-core`, delete `.skogai/logs/hook-tap` and `docs/.skogai`.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; bash -c '`
+- Bash: `cd /home/skogix/marketplace; bash -c '`
+- Bash: `cd /home/skogix/marketplace; bash -c 'plugins/skogai-core/tests/run.sh > /tmp/claude-1000/-home-skogix-marketplace/043c7…`
+- Bash: `cd /home/skogix/marketplace; ls plugins; git add -A plugins .claude-plugin CLAUDE.md TODO.md; git status --short | grep …`
+- Bash: `cd /home/skogix/marketplace; git commit -q -m "Rename hook-tap to skogai-core`
+- Bash: `cd /home/skogix/marketplace; git check-ignore -v .skogai/logs/hook-tap/log.jsonl; git ls-files | grep -i ignore; ls .sko…`
+- Bash: `cd /home/skogix/marketplace/.skogai/logs/skogai-core; bash -c 'ls hook-tap; cat hook-tap/log.jsonl log.jsonl > merged &&…`
+- Bash: `sed -i 's#\*\*/.skogai/logs/hook-tap/#**/.skogai/logs/skogai-core/#' ~/.config/git/ignore; cd /home/skogix/marketplace &…`
+- Bash: `cd /home/skogix/marketplace; find .skogai/logs docs/.skogai -type f; git check-ignore -v .skogai/logs/skogai-core/log.js…`
+
+## 2026-10-16 02:41 · turn c335d808
+
+**User**
+
+
+
+**Assistant**
+
+Right now you can't do this cleanly. loadout's active profile and its settings edits are global to your machine, so separate sessions with different profiles would overwrite each other. The fix is a per-session profile picked by an environment variable, combined with Claude Code's own CLI flags.
+
+## What blocks it today
+- **The active profile is stored in one place for every session.** It lives in `$.store`, which is a JSON file under `~/.claude/plugins/store/` shared by all sessions. `/loadout use x` in one session changes it for every session started after that.
+- **Half the switches edit shared files.** Plugins, permissions, settings keys and hooks in settings are applied by rewriting `settings.json`. That can't be scoped to one session, so an orchestrator and its workers would undo each other's changes.
+- **You can't switch from a script.** `use`, `new`, `rename` and `delete` only run when you typed them in the prompt (`register.tsx:738`). `claude -p "/loadout use x"` will almost certainly be refused; I haven't checked what origin a `-p` prompt reports.
+
+The other kinds are different. Context files, skills, agents, MCP servers and hook events are all filtered while the session runs, so those can already work per session.
+
+## Proposal: two layers
+**1. Use Claude Code's flags for everything that lives in settings files.** These apply to one process and change no files:
+
+```sh
+claude --settings .skogai/loadouts/orchestrator.settings.json \   # enabledPlugins, permissions, hooks
+       --mcp-config .skogai/loadouts/orchestrator.mcp.json --strict-mcp-config \
+       --tools "Read,Grep,Bash" --agents '{...}' \
+       --append-system-prompt-file .skogai/loadouts/orchestrator.md
+```
+
+**2. Add a per-session profile to your loadout fork, picked by an environment variable:**
+- In `session.start`, read `LOADOUT_PROFILE` with `$.env.get`, which loadout already uses. Set the active profile only in this session's `activeAtom` and never write it back to the store.
+- In that mode, don't rewrite any files; only the filtering kinds apply. Settings-type changes come from layer 1.
+- Optionally, read profiles from `.skogai/loadouts/<name>.json` in the repo, so they're versioned and you can review them in a diff. They'd use loadout's existing format: `{ name, base: "on"|"off", overrides: { "skill:foo": true, "mcp:bar": false, ... } }`.
+
+A small wrapper then ties both layers together:
+
+```sh
+claude-loadout orchestrator -p "..."
+# → LOADOUT_PROFILE=orchestrator claude --settings … --mcp-config … "$@"
+```
+
+Each ask gets its own profile file, parallel sessions don't interfere, and nothing global changes.
+
+Should I build layer 2 in the fork, along with the wrapper and one example profile (say, `orchestrator`)? If you want to send it upstream later, the environment-variable mode is small and self-contained enough for a pull request.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace/docs; grep -rln "store.get\|\$.store" . | head; grep -rn "kind: '\(composer\|bridge\)\|'comp…`
+- Bash: `cd /home/skogix/marketplace/docs; grep -n -B2 -A10 "\$.store\b\|### store\|store\.get" plugins/mods/interface.md | head …`
+- Bash: `cd /home/skogix/marketplace/docs; ls | head -80 | tr '\n' ' '; f=$(ls | grep -i cli-ref); grep -o '`--[a-z-]*' $f | sort…`
+
+## 2026-10-16 02:54 · turn 69eab1c8
+
+**User**
+
+> so simply LOADOUT_PROFILE and then copy the profiles made to where we want them?
+
+**Assistant**
+
+Yes, with one addition: a `/loadout export <name>` command, so you don't have to dig the profile out of the store file by hand.
+
+Profiles you build in the pane are saved in loadout's store file under `~/.claude/plugins/store/`. There is a separate store file for each place loadout is installed from. You have three: one from `--plugin-dir`, one from the loadout marketplace and one from `skogai-marketplace`. So profiles already don't carry over between installs, which is one more reason to keep them as files.
+
+A profile is just this:
+```json
+{ "name": "orchestrator", "base": "off", "overrides": { "skill:plan": true, "mcp:github": true } }
+```
+
+How it would work:
+1. **Build it in the pane**, the same way as now.
+2. **Export it:** `/loadout export orchestrator` writes `.skogai/loadouts/orchestrator.json` in the project. Copying it there by hand also works.
+3. **Run with it:** `LOADOUT_PROFILE=orchestrator claude …`. loadout looks for `.skogai/loadouts/orchestrator.json` first, then falls back to the profiles in the store. It also accepts a path, such as `LOADOUT_PROFILE=./some/profile.json`.
+
+The profile then applies only to that session. It isn't saved as your active profile and no files are written. That covers context files, skills, agents, MCP servers and hook events. Plugins, permissions and settings keys are still only switched by editing `settings.json`, so for those use `--settings` or `--plugin-dir` on the command line.
+
+Should I build it in the fork?
+
+**Actions**
+
+- Bash: `ls ~/.claude/plugins/store/ 2>/dev/null; f=$(ls ~/.claude/plugins/store/ | grep -i loadout | head -1); [ -n "$f" ] && py…`
+
