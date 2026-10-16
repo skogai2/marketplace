@@ -6,6 +6,12 @@ A Claude Code plugin for acting upon hook events. Each event we act upon has its
 - **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root and runs `git add -A`. Nothing is committed automatically.
 - **Status line:** shows `hook: <event>` from the log's last row.
 
+## Installing it
+
+```sh
+/plugin install skogai-core --marketplace skogai2/marketplace
+```
+
 ## Running it
 
 ```sh
@@ -47,7 +53,7 @@ plugins/skogai-core/scripts/validate-settings.sh
 | `log_path` | `.skogai/logs/skogai-core/log.jsonl` | Where the log goes, relative to the git root |
 | `status_line` | `true` | `false` hides `hook: <event>` |
 
-Scripts read the file on every event and so does the status line, so edits apply without a restart. The git-step switches stay env vars (see [diff as handover](.skogai/features/diff-as-handover.md)).
+Scripts read the file on every event and so does the status line, so edits apply without a restart. The git-step switches stay env vars (see [diff as context](DIFF-AS-CONTEXT.md)).
 
 ## Files
 

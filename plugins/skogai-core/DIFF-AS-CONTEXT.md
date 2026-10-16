@@ -27,7 +27,7 @@ The diffs carry context on their own. A hunk that edits a doc like this one show
 ## Current state
 
 - `scripts/events/Stop.sh` writes the journal at the git root on every `Stop`.
-- Git steps are env switches, all off unless set to `true`, read by `scripts/git-steps.sh` on `Stop` and `UserPromptSubmit`: `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` run `git add -A`, `wt step commit` and `wt merge --no-remove`. The user sets them globally through mise, all `false` to start. Details in `.skogai/features/diff-as-handover.md`.
+- Git steps are env switches, all off unless set to `true`, read by `scripts/git-steps.sh` on `Stop` and `UserPromptSubmit`: `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` run `git add -A`, `wt step commit` and `wt merge --no-remove`. The user sets them globally through mise, all `false` to start.
 - `scripts/write-state.sh` writes `git-diff`, `git-diff-cached` and `wt-step-diff` to `.skogai/tmp/` at the git root on `SessionStart`, `UserPromptSubmit` and `Stop`. The directory ignores itself. Nothing injects them into context yet.
 - The big `log.jsonl` stays globally gitignored, as the raw source.
 
