@@ -1094,3 +1094,63 @@ I'd do 1 (cache with `--refresh`), 2 and 4 now, and leave 3 until you've tested 
 - Bash: `cd /home/skogix/marketplace; grep -rn -i "submodule" docs/plugins/*.md | head -10`
 - Bash: `cd /home/skogix/marketplace; grep -rln -i "submodule" docs | head; grep -rn -i "submodule" docs | head -5`
 
+## 2026-10-16 10:44 · turn ffa9da81
+
+**User**
+
+> please go ahead with 1. 
+>
+> and explain 2 further please
+>
+> 3 as well honestly. not following what the alternative is you are presenting?
+>
+> 4. okay so script does what is should. you think it does. so nothing about nothing is okay with nothing. thanks. 
+>
+> dont waste time when you know you would *NEVER* run a --check for a million dollars and the end result is *EXACTLY* the same as running it normal - shit is destroyed and i have to fix
+
+**Assistant**
+
+**1 is done.** The script no longer clones anything on a normal run:
+
+- Each entry in `external-repos.json` now stores the plugin's name and description in a `"plugin"` field, and normal runs read those.
+- `--refresh` fetches only the manifest file. It uses `gh api` for GitHub repos and a sparse clone for other URLs, which downloads just `plugin.json`.
+- If a fetch fails, the script keeps the stored values instead of dropping the plugin.
+
+I ran it both ways: same `plugins` output, and `claude plugin validate .` passes. I noticed you trimmed `external-repos.json` to two entries (loadout over https, open-knowledge removed), and the script kept your version.
+
+**2, explained.** Right now an entry in `external-repos.json` uses its own format, and the script translates it into what `marketplace.json` needs:
+
+```json
+{ "name": "codex-plugin-cc", "source": "github", "repo": "openai/codex-plugin-cc", "path": "./plugins/codex" }
+```
+becomes
+```json
+"source": { "source": "git-subdir", "url": "https://github.com/openai/codex-plugin-cc.git", "path": "./plugins/codex" }
+```
+
+The proposal is to write the second form directly in `external-repos.json`, so the script copies it without translating:
+
+```json
+{ "source": { "source": "git-subdir", "url": "...", "path": "./plugins/codex" },
+  "plugin": { "name": "codex", "description": "..." } }
+```
+
+This gains two things:
+- The script can't mistranslate an entry. The open-knowledge bug was `"repo"` used where `"url"` belonged, so the plugin had no URL to clone.
+- Any source type Claude Code supports works without changes to the script.
+
+The cost is that you write the longer form by hand. It's a small win, so skip it if the current format suits you.
+
+**3, explained.** It's not an alternative to the script. It's a second way to bring in another repo's plugin:
+
+- **`external-repos.json` (what you have now):** the marketplace entry points at the other repo's URL. Users install straight from upstream, and you have no local copy.
+- **Submodule:** `git submodule add <url> plugins/loadout`. The code sits in your repo at a commit you choose, so you can read and change it locally. The script already finds it like any local plugin and writes `"source": "loadout"`, with no `external-repos.json` entry needed.
+
+Use a submodule when you want to edit a plugin or pin it to a version. Use `external-repos.json` when you just want to list it. One thing I couldn't confirm from the docs is whether installing from your marketplace also fetches the submodules. If it doesn't, users would get an empty `plugins/loadout`. Testing it with one submodule would answer that.
+
+**Actions**
+
+- Read `scripts/generate-marketplace-json.sh`
+- Bash: `cd /home/skogix/marketplace; python3 - <<'EOF'`
+- Bash: `cd /home/skogix/marketplace; bash scripts/generate-marketplace-json.sh --refresh 2>&1 | grep -v Processing; diff <(jq .p…`
+
