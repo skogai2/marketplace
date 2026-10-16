@@ -10,7 +10,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 - Marketplace entries carry only `name`, `source`, `description`; `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
 - Some plugins are git submodules (see `.gitmodules`). Run `git submodule update --init` before touching them — uninitialized submodules are empty directories.
 - `docs/` is a synced snapshot of the Claude Code docs (date in `docs/synced-at.txt`). Treat it as the read-only reference for plugin/hook/marketplace APIs; never edit it.
-- `plugin-skills/` holds reference skills to review and, where useful, merge into or add as marketplace plugins. `plugin-structure/references/marketplace-repo-conventions.md` documents this repo's conventions.
+- `todo/` holds reference material to review and, where useful, merge into or add as marketplace plugins. `todo/marketplace-repo-conventions.md` documents this repo's conventions.
 
 ## Validating
 
@@ -22,3 +22,6 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 
 Commit directly to `master`; short messages are fine.
 
+## RULES
+
+IF SOMETHING IS LINKED TO THE WRONG PATH, REFERENCE TO A THING WHICH HAVE MOVED OR DONT EXIST OR OTHER USELESS SHIT USED TO WASTE SPACE, TIME AND ENERGY THEN SHUT THE FUCK UP AND MOVE THE FUCKING FILES TO WHERE THEY BELONG!
