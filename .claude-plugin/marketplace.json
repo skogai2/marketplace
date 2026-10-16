@@ -1,6 +1,8 @@
 {
-  "name":" skogai-marketplace",
-  "description": "skogai-market",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skogai-marketplace",
+  "version": "0.0.61",
+  "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
     "url": "https://github.com/skogai"
@@ -10,7 +12,6 @@
     "verity": null,
     "jetbrains-router": null
   },
-  "version": "1.0.1",
   "plugins": [
     {
       "name": "loadout",
