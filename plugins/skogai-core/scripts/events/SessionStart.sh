@@ -9,6 +9,8 @@ cwd=$(jq -r '.cwd' <<<"$input")
 
 action=
 if root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null); then
+  . "$here/../settings.sh"
+  [[ $SKOGAI_ENABLED == true ]] || exit 0
   "$here/../write-state.sh" "$root"
   action="wrote .skogai/tmp"
 fi

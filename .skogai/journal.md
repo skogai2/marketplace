@@ -1215,3 +1215,86 @@ The `.claude-plugin/plugin.json` at the repo root is still there, and I left it 
 - Bash: `cd /home/skogix/marketplace; git show cea7f0a~1:.claude-plugin/marketplace.json | jq 'del(.plugins, .version)' > .claude…`
 - Edit `CLAUDE.md`
 
+## 2026-10-16 11:30 · turn 029bcb40
+
+**User**
+
+> great. please go ahead as you see fit
+
+**Assistant**
+
+I removed the old git hooks that would have blocked commits once you add a submodule, and brought the conventions doc in line with the script. Both are committed to `master` as `a4671f7`.
+
+- **Hooks removed:** your git hooks are active (`core.hooksPath` is `scripts/git-hooks`). `check-marketplace-sync.js` blocked any commit that changed a submodule's commit unless its `marketplace.json` entry also got a new `version` and `source.sha`. The script never writes those, so adding a submodule would have been blocked. `verify-marketplace-pins.js` was a CI check from the old setup and expected plugins at the repo root. I deleted both, with their tests.
+- **`pre-commit` kept:** it now runs only the private name check (`check-reference-names.js`). `commit-msg` is unchanged.
+- **`todo/marketplace-repo-conventions.md` updated:**
+  - It now says `marketplace.json` is generated, names the three input files, and gives the run command.
+  - It describes the two ways to bring in an outside plugin: list it in `external-repos.json`, or add it as a submodule under `plugins/`.
+  - The steps for adding a plugin now end with running the script.
+  - The layout list no longer mentions `projects/` or `plugin-skills/`.
+
+You'd already committed the script changes yourself and removed the root `.claude-plugin/plugin.json`, so I didn't need to touch either.
+
+Still open: whether installing from your marketplace also downloads submodules. Testing that needs one real submodule, so I left `loadout` listed by URL.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; git status --short; git log --oneline -3 -- .claude-plugin/plugin.json`
+- Bash: `cd /home/skogix/marketplace; git log --oneline -4; ls .claude-plugin; git check-ignore -v .claude-plugin/plugin.json .cl…`
+- Bash: `cd /home/skogix/marketplace; head -40 scripts/git-hooks/check-marketplace-sync.js; head -30 scripts/git-hooks/verify-mar…`
+- Bash: `cd /home/skogix/marketplace; cat scripts/git-hooks/commit-msg; head -15 scripts/git-hooks/plugin-pre-commit-template.js;…`
+- Bash: `cd /home/skogix/marketplace; git rm -q scripts/git-hooks/check-marketplace-sync.js scripts/git-hooks/check-marketplace-s…`
+- Bash: `cd /home/skogix/marketplace; python3 - <<'EOF'`
+- Bash: `cd /home/skogix/marketplace; sed -i 's|^scripts/                         generate|scripts/                          gene…`
+
+## 2026-10-16 11:39 · turn 18d72e9b
+
+**User**
+
+> please fix @.claude-plugin/ so we can install openai/codex-plugin-cc again
+
+**Assistant**
+
+I fixed the codex source and pushed it to GitHub (`81b4a47`), so you can retry the install. I haven't run the install myself.
+
+**Why it failed:** `external-repos.json` had been committed back in the old format, and the script copies each entry into `marketplace.json` as-is. So codex's `source` became `"github"` with leftover `name`, `plugin` and `path` fields. A `github` source ignores `path`, so Claude Code cloned the repo root, and the codex plugin lives in `plugins/codex`.
+
+**What changed:** both entries are now plain source objects. Codex uses `git-subdir` with an https URL and `path: "plugins/codex"`, and loadout uses an https URL.
+
+**Checked:**
+- The script regenerated `marketplace.json` cleanly, and `claude plugin validate` passes.
+- Cloning `https://github.com/openai/codex-plugin-cc.git` from here works, and `plugins/codex` contains the plugin's manifest.
+
+To install, refresh the marketplace and install codex:
+```
+/plugin marketplace update skogai-marketplace
+/plugin install codex@skogai-marketplace
+```
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; cat .claude-plugin/external-repos.json; jq '.plugins[] | select(.name=="codex")' .claude-pl…`
+- Bash: `cd /home/skogix/marketplace; git log --oneline -4; git status --short; grep -c "git-subdir" scripts/generate-marketplace…`
+- Bash: `cd /home/skogix/marketplace; cat > .claude-plugin/external-repos.json <<'EOF'`
+- Bash: `cd /home/skogix/marketplace; jq '.["skogai-marketplace"].source' ~/.claude/plugins/known_marketplaces.json 2>/dev/null; …`
+- Bash: `cd /home/skogix/marketplace; git push -q origin master 2>&1 | tail -2; git status -sb | head -1`
+
+## 2026-10-16 11:41 · turn 8d374697
+
+**User**
+
+> /codex:setup
+
+**Assistant**
+
+Codex is installed and ready, so the plugin works from your marketplace now.
+
+- **Codex CLI:** codex-cli 0.162.1, running on node v26.12.0 with npm 11.20.0.
+- **Login:** you're signed in with ChatGPT as emil.skogsund@gmail.com.
+- **Codex process:** none is running yet; the first review or task command starts one.
+- **Review gate:** off. Turning it on makes Claude get a fresh Codex review before it stops: `/codex:setup --enable-review-gate`.
+
+**Actions**
+
+- Bash: `node "/home/skogix/.claude/plugins/cache/skogai-marketplace/codex/1.0.6/scripts/codex-companion.mjs" setup --json`
+

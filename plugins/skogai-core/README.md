@@ -31,6 +31,24 @@ Tail the log while you use Claude:
 tail -f .skogai/logs/skogai-core/log.jsonl | jq -c '{event, action}'
 ```
 
+## Settings
+
+Per project, in `.claude/skogai-core.local.md` at the git root (gitignored). Start from the example and check it:
+
+```sh
+cp plugins/skogai-core/examples/skogai-core.local.md .claude/
+plugins/skogai-core/scripts/validate-settings.sh
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | `false` switches everything off: log, journal, git steps, status line |
+| `events` | all | Hook events to log, as a list; globs such as `"Post*"` work. The journal needs `UserPromptSubmit` and `PostToolUse*` |
+| `log_path` | `.skogai/logs/skogai-core/log.jsonl` | Where the log goes, relative to the git root |
+| `status_line` | `true` | `false` hides `hook: <event>` |
+
+Scripts read the file on every event and so does the status line, so edits apply without a restart. The git-step switches stay env vars (see [diff as handover](.skogai/features/diff-as-handover.md)).
+
 ## Files
 
 ```
@@ -39,6 +57,9 @@ hooks/hooks.json             the events we act upon, plus the status-line module
 hooks/register.ts            the status-line mod: shows the log's last event
 scripts/events/<Event>.sh    one script per event, run with the event's JSON on stdin
 scripts/append-json.sh       appends one row to the log: <json> | append-json.sh [action]
+scripts/settings.sh          sourced by the scripts: reads .claude/skogai-core.local.md
+scripts/validate-settings.sh checks a settings file: validate-settings.sh [path]
+examples/skogai-core.local.md  settings to copy into a project
 tests/run.sh                 tests the scripts in a throwaway git repo
 ```
 

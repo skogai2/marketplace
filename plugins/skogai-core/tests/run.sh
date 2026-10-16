@@ -35,13 +35,13 @@ row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "echo hi\nec
 row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "ls"}, "agent_id": "sub1"}' | "$scripts/append-json.sh"
 row PostToolUseFailure $p "{\"tool_name\": \"Read\", \"tool_input\": {\"file_path\": \"$repo/src/a.txt\"}}" | "$scripts/append-json.sh"
 row PostToolUse $other '{"tool_name": "Bash", "tool_input": {"command": "not this turn"}}' | "$scripts/append-json.sh"
-row Stop $p '{"last_assistant_message": "done"}' | "$scripts/events/Stop.sh"
+row Stop $p '{"last_assistant_message": "done"}' | SKOGAI_STAGE_ON_STOP=true "$scripts/events/Stop.sh"
 
 log="$repo/.skogai/logs/skogai-core/log.jsonl"
 check "log is at the git root, one row per event" \
   "UserPromptSubmit UserPromptSubmit PostToolUse PostToolUse PostToolUseFailure PostToolUse Stop" \
   "$(jq -r .event "$log" | paste -sd' ')"
-check "only Stop has an action" "journal entry, git add -A" "$(jq -r '.action // empty' "$log")"
+check "only Stop has an action" "journal entry, git add -A, wrote .skogai/tmp" "$(jq -r '.action // empty' "$log")"
 
 expected="## <ts> · turn 11111111
 
@@ -64,5 +64,26 @@ check "journal entry at the git root" "$expected" \
 check "journal and work are staged, log is not" \
   "$(printf '.skogai/journal.md\nsrc/a.txt')" \
   "$(git -C "$repo" diff --cached --name-only | grep -v '^.skogai/logs/')"
+
+# Settings in .claude/skogai-core.local.md: a filtered list and another log path.
+mkdir -p "$repo/.claude"
+printf -- '---\nevents:\n  - "Post*"\nlog_path: other.jsonl # moved\n---\nnotes\n' >"$repo/.claude/skogai-core.local.md"
+row PreToolUse $p | "$scripts/append-json.sh"
+row PostToolUse $p | "$scripts/append-json.sh" ran
+check "settings: only listed events, at log_path" "PostToolUse ran" \
+  "$(jq -r '"\(.event) \(.action)"' "$repo/other.jsonl")"
+check "settings: validator accepts them" 0 \
+  "$(cd "$repo" && "$scripts/validate-settings.sh" >/dev/null; echo $?)"
+
+printf -- '---\nenabled: false\n---\n' >"$repo/.claude/skogai-core.local.md"
+before=$(wc -l <"$log")
+row UserPromptSubmit $p | "$scripts/events/UserPromptSubmit.sh"
+row Stop $p '{"last_assistant_message": "x"}' | "$scripts/events/Stop.sh"
+check "settings: enabled: false logs and journals nothing" "$before 1" \
+  "$(wc -l <"$log") $(grep -c '^## ' "$repo/.skogai/journal.md")"
+
+printf -- '---\nenabled: maybe\nlog_path: /abs\n---\n' >"$repo/.claude/skogai-core.local.md"
+check "settings: validator rejects bad values" 1 \
+  "$(cd "$repo" && "$scripts/validate-settings.sh" >/dev/null; echo $?)"
 
 exit $fail

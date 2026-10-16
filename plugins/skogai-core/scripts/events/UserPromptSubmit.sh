@@ -10,6 +10,8 @@ cwd=$(jq -r '.cwd' <<<"$input")
 
 ran=
 if root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null); then
+  . "$here/../settings.sh"
+  [[ $SKOGAI_ENABLED == true ]] || exit 0
   ran=$("$here/../git-steps.sh" USER_PROMPT_SUBMIT "$root")
   "$here/../write-state.sh" "$root"
   ran+="${ran:+, }wrote .skogai/tmp"
