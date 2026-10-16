@@ -1,1 +1,6 @@
-/.skogai/tmp/git-diff-cached
+/.skogai/logs/hook-tap/log.jsonl
+/docs/.skogai/logs/hook-tap/log.jsonl
+/docs/plugins/.skogai/logs/hook-tap/log.jsonl
+
+# per-user plugin settings
+.claude/*.local.md

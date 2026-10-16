@@ -1,12 +1,16 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "skogai-marketplace",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skogai-market",
+  "version": "0.0.61",
+  "description": "skogai-market",
   "owner": {
-    "name": "skogix"
+    "name": "skogix",
+    "url": "https://github.com/skogai"
   },
-  "metadata": {
-    "pluginRoot": "./plugins/",
-    "description": "skogai marketplace"
+  "renames": {
+    "forge": null,
+    "verity": null,
+    "jetbrains-router": null
   },
   "version": "1.0.1",
   "plugins": [

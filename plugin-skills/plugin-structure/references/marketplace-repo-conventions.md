@@ -1,105 +1,81 @@
-# SkogAI Market Conventions
+# skogai-marketplace Conventions
 
-This file documents how plugin structure is actually implemented in the
-`skogai-market` marketplace repository (this repo), as distinct from the
-generic Claude Code plugin spec covered in SKILL.md. Consult this file when
-adding or auditing a plugin here, not when explaining plugin structure in
-the abstract.
+How plugins are laid out in this repository (`skogai-marketplace`), as
+distinct from the generic Claude Code plugin spec in SKILL.md. Consult this
+file when adding or auditing a plugin here, not when explaining plugin
+structure in the abstract.
 
-## Marketplace Manifest Layout
+## Repository Layout
 
-A single `.claude-plugin/marketplace.json` at the repository root lists every
-plugin. Each entry uses a relative path source pointing at a top-level
-directory:
+```
+.claude-plugin/marketplace.json   the marketplace manifest
+plugins/<name>/                   one directory per plugin
+projects/<name>/                  larger projects (git submodules), not plugins by default
+plugin-skills/                    reference skills about building plugins
+docs/                             mirrored Claude Code docs (read-only reference)
+.skogai/                          local runtime state, gitignored
+```
+
+## Marketplace Manifest
+
+`.claude-plugin/marketplace.json` sets `metadata.pluginRoot` to `./plugins/`,
+so entries use **bare names** as their source:
 
 ```json
-{ "name": "plugin-dev", "source": "./plugin-dev", ... }
+{ "name": "hook-tap", "source": "hook-tap", "description": "..." }
 ```
 
-Plugins are never nested under a subdirectory grouping — each lives directly
-at repo root as `{plugin-name}/`. Some entries instead point at an external
-repo (see `.claude-plugin/external-repos.json`) and use a `git-subdir`,
-`github`, or `url` source object rather than a relative path — `skoghooks`
-is one such example, vendored from `skogai/skoghooks`.
+A bare name (no `/`) resolves under `pluginRoot`, giving `./plugins/hook-tap`.
+A source that starts with `./` is resolved from the **marketplace root**
+instead, ignoring `pluginRoot`, so `"source": "./hook-tap"` points at a
+`./hook-tap` that does not exist. Bare names require Claude Code v2.1.239+.
 
-## Required Files Per Plugin (Community Plugins)
+Plugins live directly under `plugins/`, never nested deeper.
 
-Per this repo's CLAUDE.md, every plugin directory must contain:
+## Required Files Per Plugin
 
-- `.claude-plugin/plugin.json`
-- `README.md`
+- `.claude-plugin/plugin.json`, with at least `name`, `version` and `description`
+- `README.md` covering what the plugin does and how to run it
 
-**LICENSE files are not required** for plugins in this marketplace. The
-sole exception is `plugin-dev`, which keeps its `LICENSE` file because it
-bundles Anthropic's original plugin-development components under their
-upstream license. Do not flag a missing `LICENSE` as an error for any other
-plugin, and do not add one to a new plugin unless it is similarly vendoring
-licensed upstream code.
+A `LICENSE` is not required unless the plugin vendors licensed upstream code.
 
-## marketplace.json Is Generated — Never Hand-Edit It
+Declare components explicitly in `plugin.json` (`commands`, `agents`,
+`skills`, `hooks`, `mcpServers`) even though Claude Code auto-discovers them.
+The exception is `hooks/hooks.json`, which loads automatically and
+must not be declared again (it causes a "duplicate hooks file" error).
 
-`.claude-plugin/marketplace.json` is a build artifact produced by
-`scripts/generate-marketplace-json.sh` (invoked via `make
-generate-marketplace-json`). Do not edit `marketplace.json` directly; edit
-each plugin's own `.claude-plugin/plugin.json` instead and regenerate.
+## External Plugins
 
-The script, for every discovered `*/.claude-plugin/plugin.json`:
+Code from another repo comes in as a **git submodule** under `plugins/` (or
+`projects/` if it is not a plugin itself). Check what the submodule
+actually contains before adding a marketplace entry: a repo that ships
+`.claude-plugin/marketplace.json` instead of `plugin.json` is a marketplace,
+not a plugin, and should be added on its own with `/plugin marketplace add`
+rather than listed as a plugin source here.
 
-1. Computes the plugin's `source` path from its directory location
-   (`./{plugin-name}`).
-2. Copies `name`, `version`, `description`, `author`, `license`, `homepage`,
-   `repository`, `keywords`, `commands`, `agents`, `hooks`, `mcpServers`,
-   and `skills` **verbatim from `plugin.json`** into the marketplace entry —
-   it does not scan the plugin's directories itself. Empty/absent fields are
-   omitted from the entry.
-3. Strips `./hooks/hooks.json` from a plugin's declared `hooks` field if
-   present, since Claude Code loads that file automatically and declaring it
-   again causes a "duplicate hooks file" error.
-4. Sorts plugins alphabetically by name.
-5. If the resulting JSON differs from what's on disk, bumps the marketplace
-   manifest's patch version automatically.
+## Runtime State and Logs
 
-Run it after adding a plugin or changing any `plugin.json`:
+Anything a plugin writes at runtime goes under `.skogai/` in the session's
+working directory, namespaced by plugin:
 
-```bash
-make generate-marketplace-json
-# or: ./scripts/generate-marketplace-json.sh
+```
+.skogai/logs/<plugin-name>/log.jsonl
 ```
 
-## Declare Components Explicitly in plugin.json (Best Practice)
+These paths are gitignored. Never write runtime output into the plugin's own
+directory.
 
-Claude Code's own auto-discovery (scanning `commands/`, `agents/`,
-`skills/`, `hooks/` at the plugin root) works whether or not `plugin.json`
-declares those fields — but the generator script only mirrors what
-`plugin.json` declares into `marketplace.json`. This means a plugin that
-omits `commands`/`agents`/`skills` from its `plugin.json` will have an
-empty-looking entry in `marketplace.json` even if it has plenty of working
-components on disk.
+## Per-Project Plugin Settings
 
-- **Good practice, followed here**: `claude-docs` and `plugin-builder`
-  declare their components explicitly in `plugin.json`, e.g.
-  `"commands": ["./commands/search.md"]`, `"skills": ["./skills/cc-skill-builder", ...]`.
-  This gives anyone skimming `marketplace.json` an at-a-glance view of what
-  each plugin provides, without opening the plugin directory.
-- **Gap to fix, not a neutral choice**: `plugin-dev` currently ships a
-  bare-minimum `plugin.json` (little more than `name` and `description`), so
-  its marketplace entry doesn't list its commands/agents/skills even though
-  the directories exist and are auto-discovered at runtime. When touching
-  this plugin's manifest, add the explicit arrays rather than leaving them
-  implicit.
+A plugin that needs user configuration reads it from
+`.claude/<plugin-name>.local.md`: YAML frontmatter for settings, with the
+markdown body for notes or prompt text. See the `plugin-settings` skill.
+These files are per-user and gitignored (`.claude/*.local.md`). A plugin
+must behave sensibly when its settings file is missing.
 
-## Practical Guidance When Adding a Plugin Here
+## Adding a Plugin
 
-1. Create the plugin at top level: `./{plugin-name}/`.
-2. Add `.claude-plugin/plugin.json`, `README.md`. A `LICENSE` file is not
-   needed unless the plugin is itself vendoring licensed upstream code.
-3. In `plugin.json`, explicitly declare `commands`/`agents`/`skills`/`hooks`/
-   `mcpServers` arrays for every component the plugin ships (paths relative
-   to the plugin root, e.g. `"./skills/foobar"`), even though Claude Code
-   would auto-discover them without this — it's what makes the plugin
-   legible in `marketplace.json`.
-4. Run `make generate-marketplace-json` to regenerate
-   `.claude-plugin/marketplace.json` from the updated `plugin.json`. Never
-   hand-edit `marketplace.json`.
-5. Validate with `plugin-validator` (or `/plugin-builder:validate`) before
-   considering the plugin complete.
+1. Create `plugins/<name>/` with `.claude-plugin/plugin.json` and `README.md`.
+2. Add an entry to `.claude-plugin/marketplace.json` with `"source": "<name>"`.
+3. Run `claude plugin validate plugins/<name>`.
+4. Test locally with `claude --plugin-dir plugins/<name>`.
