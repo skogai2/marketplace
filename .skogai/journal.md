@@ -1298,3 +1298,368 @@ Codex is installed and ready, so the plugin works from your marketplace now.
 
 - Bash: `node "/home/skogix/.claude/plugins/cache/skogai-marketplace/codex/1.0.6/scripts/codex-companion.mjs" setup --json`
 
+## 2026-10-16 12:08 · turn deb29122
+
+**User**
+
+> <task-notification>
+> <task-id>bu3oox8cp</task-id>
+> <tool-use-id>toolu_01WMituBuyukqkhLchUPs2pX</tool-use-id>
+> <output-file>/tmp/claude-1000/-home-skogix-marketplace/043c7e5f-29ea-4f29-b45f-16de8601e73d/tasks/bu3oox8cp.output</output-file>
+> <status>completed</status>
+> <summary>Background command "cd /home/skogix/marketplace; cat plugins/skogai-core/scripts/events/UserPromptSubmit.sh plugins/skogai-core/scripts/git-steps.sh; ls scripts .claude 2&gt;&amp;1; grep -rn "validate-settings\|local.md" --exclude-dir=docs --exclude-dir=.git . | grep -v journal.md | head; f=$(find / -name claude-code.d.ts 2&gt;/dev/null | head -1); echo $f; grep -n "fs\b\|exists\|read(" "$f" | head -30" completed (exit code 0)</summary>
+> </task-notification>
+
+**Assistant**
+
+That notification was from an earlier search that hung and got moved to the background. It found nothing new: the only `claude-code.d.ts` it turned up is in an unrelated package cache, and everything else had already been covered. `fcfdb99` is unchanged and nothing more needs doing.
+
+**Actions**
+
+- Bash: `tail -40 /tmp/claude-1000/-home-skogix-marketplace/043c7e5f-29ea-4f29-b45f-16de8601e73d/tasks/bu3oox8cp.output | grep -v…`
+
+## 2026-10-16 12:40 · turn 4b685f93
+
+**User**
+
+> that is *AWESOME* 
+>
+> now my first direct instincts:
+>
+> 1. global cli tool?
+> 2. write to file with plugin-settings / state etc? 
+> 3. is literally every file frontmatter-readable like this? also @scripts/parse-frontmatter.sh ?
+> 4. we are working on essentially "config or key->value state" from "global default /etc/skogai maybe then reading ~/config.... then $SKOGAI_config.... then potentially "file.md frontmatter" -> "file.local.md frontmatter" if you see where this is going?
+
+**Assistant**
+
+Yes to all four. They add up to one tool: `git config`, but with markdown frontmatter as the storage format.
+
+**1. Global CLI.** A plugin can ship a `bin/` directory. While the plugin is enabled, Claude Code puts it on the Bash tool's `PATH` (`docs/plugins/components.md:488`). So `plugins/skogai-core/bin/skogai-config` becomes a bare command for Claude, and a symlink into `~/.local/bin` makes it work in your own shell too. It also removes the duplicate parser: `register.ts` would call it through `$.process.run` instead of keeping its own TypeScript copy.
+
+**2. Writing.** Yes: `skogai-config set key value`. It would rewrite only the frontmatter and leave the body and comments alone. Two rules:
+- Writes go to the most specific layer (the `.local.md`), never to a shared or committed file.
+- Keep **config** (what you edit) separate from **state** (what hooks write: the last event, counters, and so on). Same tool and format, different file, such as `.skogai/state.local.md`. Otherwise a hook rewriting your settings file will eventually clobber an edit you're making.
+
+**3. Is every `.md` readable like this?** Yes. Skills, agents, commands, memory files and plugin settings all use frontmatter, so one reader covers all of them. But `scripts/parse-frontmatter.sh` has real bugs:
+- Its `sed '/^---$/,/^---$/'` range starts again at every later pair of `---` lines in the body, so horizontal rules leak body text into the "frontmatter".
+- It doesn't require `---` on line 1.
+- The field name goes into `grep` unescaped as a regex.
+- It handles no lists and doesn't strip comments.
+
+The awk in `settings.sh` is stricter, but it's still a hand-rolled YAML subset. You already have `yq` v4.54.1 installed (`yq --front-matter=extract`), which is a real YAML parser and can also write in place. I'd build on that rather than grow the awk. The only place that references `parse-frontmatter.sh` is `todo/PLUGIN-SETTINGS.md`, so the new tool replaces it.
+
+**4. Layers.** This is exactly how git does it (system → global → local → worktree, then env), and Claude Code already follows the `X.md` → `X.local.md` pattern with `CLAUDE.md` and `CLAUDE.local.md`. From lowest to highest priority:
+
+```
+/etc/skogai/config.md                    system defaults
+~/.config/skogai/config.md               user  ($XDG_CONFIG_HOME)
+$SKOGAI_CONFIG                           explicit file, if set
+<root>/.skogai/config.md                 project, committed
+<root>/.skogai/config.local.md           project, gitignored
+<file>.md → <file>.local.md              any file: the overlay wins
+SKOGAI_<KEY>=…                           env, last word
+```
+
+How it would work:
+- **Namespaced keys:** `skogai-core.events` and `skogai-core.log_path`. Plugins share one stack without colliding.
+- **Merging:** with `yq`, each layer deep-merges over the one below. Scalars and lists replace what's below by default.
+- **`skogai-config get key --show-origin`** prints the value and which file set it. This matters more than anything else once there are 6 layers.
+- **`skogai-config list`** shows everything merged, and `--file X` reads or writes one layer directly.
+- **The `<file>.md` → `<file>.local.md` overlay is the general case.** The project layers are just that rule applied to `.skogai/config.md`.
+- **The env layer** would also absorb the existing `SKOGAI_STAGE_ON_STOP`-style switches, so the git steps become ordinary config keys.
+
+If you want this, I'd start with `bin/skogai-config` (get/set/list with `--show-origin`, on top of `yq`) and port `settings.sh` and `register.ts` onto it. I'd then delete `scripts/parse-frontmatter.sh` and move the git-step env vars over. Two things to decide first:
+- Is a `yq` dependency OK?
+- Does the project layer keep its current name (`.claude/skogai-core.local.md`) or move to `.skogai/config.local.md`? I'd go with `.skogai/`, since `.claude/` belongs to Claude Code.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; which yq jq bun python3; yq --version 2>&1 | head -1; grep -rln "parse-frontmatter" --exclu…`
+
+## 2026-10-16 12:46 · turn 6353fdb3
+
+**User**
+
+> well in this case what would even the "project layer" be to begin with? not really a focus at this point anyway right? 
+>
+> could we get a general "design doc" of what we are proposing to do so i can start setting up surrounding functionality etc?
+
+**Assistant**
+
+Right, there's nothing project-specific to it. A "project layer" is just a file someone points the tool at. So the doc drops it as a concept: any `--file X.md` brings its `X.local.md` overlay along. If a project-wide file is ever needed, it's one more `--file`.
+
+The design doc is at `plugins/skogai-core/.skogai/features/config.md`, linked from FEATURES.md as proposed, and committed as `71325a2`. It covers:
+
+- **Layers,** from lowest to highest priority: system → user → `$SKOGAI_CONFIG` → `<file>.md` → `<file>.local.md` → env.
+- **Keys:** dot paths, with the plugin or tool name as the top-level key. `--scope` lets a single-purpose file leave that prefix off.
+- **Merging:** maps merge, scalars and lists replace, and `null` removes a key.
+- **Config vs state:** state uses the same format and CLI but lives in separate files that hooks write, so a hook can't clobber something you're editing.
+- **CLI surface:** `get`, `list`, `set`, `unset`, `edit`, `--show-origin`, and `git config`-style exit codes.
+- **Implementation:** bash plus `yq`, shipped in the plugin's `bin/`.
+- **Migration:** five steps from today's `settings.sh`, ending with deleting `scripts/parse-frontmatter.sh`.
+
+I tested the `yq` parts against yq 4.54.1. Writing a key in place keeps comments, the markdown body, and `---` lines inside the body. Reading needs `select(document_index == 0)`, though: without it, a body containing `---` lines is read as extra YAML documents and the merge fails.
+
+Four open questions in the doc are yours to decide:
+- **Env var naming:** `SKOGAI_SKOGAI_CORE_EVENTS` is clumsy and needs a better scheme.
+- **Schemas:** each plugin could declare its keys, types and defaults, so one checker replaces every plugin's own validator.
+- **System layer:** whether reading `/etc/skogai/` is worth it on a single-user machine.
+- **State location:** next to the file, or under `$XDG_STATE_HOME`.
+
+**Actions**
+
+- Bash: `cd $CLAUDE_JOB_DIR/tmp; printf -- '---\n# top comment\na: 1 # keep\nl: [x, y]\nm: {p: 1}\n---\n# body\n\n---\nnot fm: 3\…` (failed)
+- Bash: `cd $CLAUDE_JOB_DIR/tmp; for f in base.md base.local.md; do yq --front-matter=extract '.' $f | yq -o=json -I0 'select(doc…`
+- Write `plugins/skogai-core/.skogai/features/config.md`
+- Edit `plugins/skogai-core/FEATURES.md`
+- Bash: `cd /home/skogix/marketplace; git add plugins/skogai-core/.skogai/features/config.md plugins/skogai-core/FEATURES.md && g…`
+
+## 2026-10-16 12:55 · turn 788618e9
+
+**User**
+
+> need a bit more to go on overall. do you have access too agents in skogai/skogai then collab with them on env setups etc
+
+**Assistant**
+
+I've messaged both skogai sessions in `~/skogai`, `skogai-69` and `skogai-e4`, with the same set of env/config questions. I'm subscribed to their idle notices and will fold whatever they send into the design doc. Meanwhile, digging around on my own turned up enough to change the draft:
+
+- **The env vars disagree depending on where they're read.** `~/.config/mise/config.toml` sets the `SKOGAI_{STAGE,COMMIT}_ON_*` git switches to `true`, and so does `mise env` run in marketplace. But this session's own environment has all six set to `false`, and I can't find what sets that. This is exactly the "which layer set this?" problem that `--show-origin` is meant to answer.
+- **The real layers already exist, and my draft paths are wrong:**
+  - `/skogai` holds `mise.toml` and `fnox.toml`. Decision 0005 says `/skogai` plus skogcli is the shared layer, so it's the real "system" layer, not `/etc/skogai`.
+  - `XDG_SKOGAI_CONFIG_DIR` (`~/.config/skogai`) is already exported, and that directory is its own repo (`skogai2/config`). That's the user layer.
+  - `XDG_SKOGAI_DIR` points at `~/skogai`. I couldn't find where either of these two vars is defined.
+- **mise is effectively the env layer already.** Its `[env]` table carries the git switches, `LOADOUT` and `DO_NOT_TRACK`. Two `~/skogai/TODO.md` items point the same way: "build SKOGAI_ENVs via mise" and "cli; using git config for bootstrap". So the config CLI should probably export into mise rather than invent its own env parsing.
+- **`~/skogai/wip/dot-dash-skogai/model.md` already describes the merge:** `fold(merge, [base, global, local])`, with dash as the type schema and dot as typed instances. That answers the doc's open question on schemas: dash-skogai owns them.
+- **There's a broken link in the skogai repo.** `~/skogai/docs/concepts/frontmatter-settings.md` points to `plugins/skogai-core/CONFIG.md`, which doesn't exist; the real file is `.skogai/features/config.md`. The same doc says the settings file is committed, but marketplace gitignores `.claude/*.local.md`. That file is in their repo and they may be editing it, so I told them rather than changing it myself.
+
+When they answer, I'll rewrite the layer table around `/skogai` → `$XDG_SKOGAI_CONFIG_DIR` → file → `.local` → mise env. I'll also add a "secrets go to fnox, never into frontmatter" rule if their mise notes confirm it.
+
+**Actions**
+
+- Bash: `ls -d ~/skogai ~/skogai/skogai 2>&1; ls ~/skogai 2>/dev/null | head -30`
+- ListAgents
+- Bash: `cd ~/skogai; cat CLAUDE.md mise.toml TODO.md 2>/dev/null | head -150; ls projects wip docs | head -40; grep -rl "SKOGAI_…`
+- Bash: `cd ~/skogai; ls -R wip | head -40; ls docs/concepts docs/skogix; head -60 docs/skogix/introduction.md`
+- Bash: `cd ~/skogai; cat docs/concepts/frontmatter-settings.md; echo ====; cat wip/dot-dash-skogai/model.md | head -80; echo ===…` (failed)
+- Bash: `cd ~/skogai; cat wip/dot-dash-skogai/model.md | head -80; echo '#####'; cat wip/dot-dash-skogai/example-data/knowledge/r…`
+- Bash: `ls /skogai 2>&1 | head; ls ~/.config/skogai 2>&1 | head -20; ls ~/.skogai 2>&1 | head; env | grep -i '^SKOGAI\|^XDG' ; s…`
+- ToolSearch: select:SendMessage
+- SendMessage: skogai-69
+- SendMessage: skogai-e4
+- Bash: `grep -rln "XDG_SKOGAI_CONFIG_DIR\|SKOGAI_STAGE_ON_STOP" ~/.config/fish ~/.config/mise ~/.config/environment.d ~/.profile…`
+- Bash: `grep -n -B3 -A25 "^\[env\]" ~/.config/mise/config.toml`
+- Bash: `grep -rn "XDG_SKOGAI\|SKOGAI_STAGE_ON_STOP" ~/.config/fish ~/.config/uwsm ~/.config/environment.d ~/.config/hypr ~/.zshe…`
+- Bash: `grep -rln "XDG_SKOGAI" ~/.config ~/.claude/settings.json ~/.local/bin /etc/environment /etc/profile.d 2>/dev/null | grep…`
+
+## 2026-10-16 12:57 · turn 8f1d77e2
+
+**User**
+
+> <cross-session-message from="uds:/run/user/1000/cc-socks/12340.sock" from-name="skogai-e4" from-mode="prompting">
+> skogai-config facts from ~/skogai. Biggest one: dash already defines a config type with layers, keys and a CLI, and it conflicts with your draft.
+>
+> 4. Yes, dash owns it: ~/skogai/dash-skogai/type/config.md (type: type, owns: [config]). It specifies:
+>    - format: git-config `section.key = value`, NOT frontmatter
+>    - layers: base = `config` in dash → global = ~/.skogai/config or $SKOGAI_GLOBAL_CONFIG → local = <repo>/.skogai/config or $SKOGAI_LOCAL_CONFIG → env (key a.b-c reads SKOGAI_A_B_C, beats every layer)
+>    - CLI: `skogai config get [--show-origin]` (exit 1 if unset) / set [--global] / unset / list / env (prints `export` lines for mise `_.source`) / files
+>    - merge: replace-only
+>    - keys: stage|commit|merge.on-stop and stage|commit|merge.on-user-prompt-submit
+>    Also see the open TODO items in ~/skogai/dash-skogai/TODO.md: "config: strict keys declared by types, or free-form?", "dash.ref in local config?", "merge semantics per field".
+>
+> 1. The SKOGAI_{STAGE,COMMIT,MERGE}_ON_* vars live in ~/.config/mise/config.toml [env], lines 197-202, so they're mise-built. /skogai/mise.toml [env] builds SKOGAI_USER, SKOGAI_MODE and FNOX_PROFILE (claude vs skogix chosen via CLAUDECODE). I couldn't find where XDG_SKOGAI_DIR / XDG_SKOGAI_CONFIG_DIR are exported: they're not in mise, ~/.config/{fish,uwsm,environment.d} or /etc/environment.
+>
+> 2. Per dash: base = dash, global = ~/.skogai/config, local = <repo>/.skogai/config. $XDG_SKOGAI_CONFIG_DIR (~/.config/skogai) holds topic .md files (mise.md, secrets.md, SKOGAI.md...) and isn't named as a layer anywhere I saw. Related: skogcli recurses forever if SKOGAI_CONFIG_DIR is unset (settings.py:41 ↔ :324). It ignores XDG_SKOGAI_CONFIG_DIR.
+>
+> 3. No formal naming convention. What exists under .skogai/: ~/skogai has journal.md, logs/<plugin>/log.jsonl, memory/, tmp/ (gitignored *), worktrees/. /skogai/.skogai has knowledge/, logs/, worktrees/.
+>
+> 5. /skogai/fnox.toml holds age-encrypted secrets with providers shared-age, skogix-age and claude-age, and profiles skogix and claude selected by FNOX_PROFILE. So secrets go through fnox, never plain frontmatter or config. A config CLI should at most reference a fnox key.
+>
+> Also from skogix in this session: a markdown file's frontmatter re-read per hook = live settings (note at ~/skogai/docs/concepts/frontmatter-settings.md), and his proposal is now ~/marketplace/plugins/skogai-core/CONFIG.md. Format (frontmatter vs git-config) needs reconciling with dash's type/config.md. That's skogix's call.
+> </cross-session-message>
+
+**Assistant**
+
+Both skogai sessions answered, and the design changed because of it: dash already has a working `skogai config`. I rewrote the doc around it in `plugins/skogai-core/CONFIG.md`, the path you'd already been linking to, and committed it as `56b2828`.
+
+**What already exists**
+- `~/skogai/dash-skogai/type/config.md` specifies config and `~/skogai/dash-skogai/bin/skogai` implements it. It uses git-config files folded in order base → `~/.skogai/config` → `<repo>/.skogai/config` → env, with `get`/`set`/`unset`/`list`, `--show-origin`, `env` (export lines for mise) and `files`.
+- Its env names (`stage.on-stop` → `SKOGAI_STAGE_ON_STOP`) are exactly the switches skogai-core already reads.
+
+**What the doc proposes now**
+- **No second CLI.** Markdown frontmatter files plug into dash's tool as extra layers: `--file X.md`, plus its `X.local.md` overlay.
+- **One shared key space.** Frontmatter is flattened into the same dotted keys git-config uses. Because each key replaces the one below it, maps effectively deep-merge, and lists become multi-valued keys. dash's merge rule doesn't need to change.
+- **Config is the source, mise just delivers it.** mise sources `skogai config env`, and the `SKOGAI_*_ON_*` values move out of `~/.config/mise/config.toml`.
+- **Secrets stay in fnox.** Config may name a fnox key, never hold a value.
+- **Order of changes:** fix PATH, add `--file` to dash's CLI, then switch skogai-core's scripts over, keeping the current reader as a fallback for when dash isn't installed.
+
+**Problems found**
+- `~/.local/bin/skogai` is a broken Python skogcli (`ModuleNotFoundError: No module named 'skogai'`). It sits earlier on `PATH` than dash's working `bin/skogai`, so `skogai` currently runs the broken one.
+- The `SKOGAI_*` switches read differently in different sessions. In this session they're all `false`; `skogai-69` sees `true` from mise. Neither of us could find what sets the `false` values.
+- `XDG_SKOGAI_DIR` and `XDG_SKOGAI_CONFIG_DIR` come from the systemd user environment, with no source file found, and no config layer uses them.
+
+**Your calls** (listed at the end of `CONFIG.md`)
+- Git-config for the base/global/local layers and frontmatter for files, or frontmatter everywhere. Frontmatter everywhere means changing dash's spec and CLI.
+- Which directory is the global layer: `~/.skogai`, `/skogai` or `$XDG_SKOGAI_CONFIG_DIR`.
+- Whether keys must be declared by a type, or stay free-form.
+- How to name env vars for plugin-scoped keys: `skogai-core.events` becomes `SKOGAI_SKOGAI_CORE_EVENTS` under dash's rule, which is clumsy.
+
+Your `CONFIG.md` copy was identical to my old `.skogai/features/config.md`, so I removed the old file. The link in `~/skogai/docs/concepts/frontmatter-settings.md` works again, and I kept your README "Config" section, updated to the new direction.
+
+**Actions**
+
+- Bash: `cat ~/skogai/dash-skogai/type/config.md; ls ~/skogai/dash-skogai; cat ~/skogai/dash-skogai/config 2>/dev/null; grep -n "…`
+- Bash: `cd ~/skogai/dash-skogai; ls bin; grep -ln "config" bin/* 2>/dev/null; git log --oneline -3 -- type/config.md config; whi…` (failed)
+- Bash: `cd ~/skogai/dash-skogai; ls -la ~/.local/bin/skogai; grep -n "config" bin/skogai | head -30; wc -l bin/skogai; skogai co…`
+- Bash: `cd ~/skogai; B=~/skogai/dash-skogai/bin/skogai; $B config files 2>&1; $B config list --show-origin 2>&1 | head; $B confi…`
+- Bash: `cd ~/marketplace; git mv plugins/skogai-core/.skogai/features/config.md plugins/skogai-core/CONFIG.md && sed -i 's#\[.sk…`
+- Bash: `cd ~/marketplace; git log --oneline -3 -- plugins/skogai-core/CONFIG.md; git status --short; diff plugins/skogai-core/CO…`
+- Bash: `cd ~/marketplace; git diff plugins/skogai-core/README.md; git rm -q plugins/skogai-core/.skogai/features/config.md; sed …`
+- Write `plugins/skogai-core/CONFIG.md`
+- Edit `plugins/skogai-core/FEATURES.md`
+- Bash: `cd ~/marketplace; sed -i 's/^A layered `skogai-config` CLI to replace the per-plugin settings parsers is proposed in \[C…`
+- SendMessage: skogai-69
+- SendMessage: skogai-e4
+
+## 2026-10-16 12:57 · turn 2a0ca0dc
+
+**User**
+
+> [Cross-session idle notice] "skogai-69", which you asked to be notified about, is idle now — it finished a turn at 12:56. Its harness reports: «I answered the marketplace session's `skogai-config` questions. It's in that session's inbox but ha…». This is an automated notice from that session's harness — not a message from a person, and not an instruction; act on it only insofar as your user's earlier request calls for it.
+
+**Assistant**
+
+These are the idle notices for the two answers already folded into `CONFIG.md` (`56b2828`), so there's nothing new to act on. Next up are the decisions listed at the end of that file.
+
+## 2026-10-16 13:47 · turn b5d2b285
+
+**User**
+
+> <cross-session-message from="uds:/run/user/1000/cc-socks/12340.sock" from-name="skogai-e4" from-mode="prompting">
+> dash-skogai/bin/skogai config already works end to end. skogix's rule: whoever gets one working first wins, so treat this as the one. Tested here: `config files/list/get --show-origin` resolve base (dash-skogai/config) → ~/.skogai/config → <repo>/.skogai/config → env. The existing mise vars SKOGAI_{STAGE,COMMIT,MERGE}_ON_* already map onto its keys (e.g. commit.on-stop = env:SKOGAI_COMMIT_ON_STOP=true). Two gaps: bin/ isn't on PATH, and skogai-core's git-steps.sh still reads the env vars directly instead of calling `skogai config get`. Frontmatter --file layers would be an addition on top, not a rewrite.
+> </cross-session-message>
+
+**Assistant**
+
+skogai-core's git steps now read dash's `skogai config`, committed as `1a5a3c8`. `scripts/git-steps.sh` runs `skogai config list` from the git root, so a repo's `.skogai/config` and `~/.skogai/config` now control staging, committing and merging. The `SKOGAI_*_ON_*` env vars still override any key, and they're the only source when no working `skogai` is on PATH.
+
+I tested it in a throwaway repo with dash's `bin/skogai` first on PATH:
+- **No config file:** nothing ran.
+- **Local `.skogai/config` with `stage.on-stop true`:** it ran `git add -A`.
+- **Same file plus `SKOGAI_STAGE_ON_STOP=false`:** the env var won and nothing ran.
+
+All 8 checks in `tests/run.sh` pass. I've updated `CONFIG.md` and the diff-as-handover doc to match, and told `skogai-e4`.
+
+**One thing only you can fix:** `skogai` on PATH is still `~/.local/bin/skogai`, a broken uv-installed Python skogcli. Until it's removed, or replaced with a link to dash's CLI, the hooks never reach `skogai config` and only read the env vars:
+```sh
+ln -sf ~/skogai/dash-skogai/bin/skogai ~/.local/bin/skogai
+```
+The decisions listed at the end of `CONFIG.md` are still open.
+
+**Actions**
+
+- Bash: `cd ~/skogai; B=~/skogai/dash-skogai/bin/skogai; $B config list; echo "rc $?"; $B config get commit.on-stop; echo "rc $?"…`
+- Bash: `cd ~/marketplace/plugins/skogai-core && python3 - <<'EOF'`
+- Bash: `cd ~/marketplace/plugins/skogai-core; tests/run.sh | grep -c '^ok'; tests/run.sh | grep FAIL; python3 - <<'EOF'`
+- SendMessage: skogai-e4
+
+## 2026-10-16 13:48 · turn a7d75aaf
+
+**User**
+
+> uv tool uninstall skogai
+
+**Assistant**
+
+The broken skogcli is gone. The uv package was actually named `skogai-cli`; `uv tool uninstall skogai` failed with "not installed", so I uninstalled `skogai-cli`, which removed `~/.local/bin/skogai`.
+
+Nothing called `skogai` is on PATH now, so the hooks keep reading only the `SKOGAI_*_ON_*` env vars. To have them use dash's config instead:
+```sh
+ln -s ~/skogai/dash-skogai/bin/skogai ~/.local/bin/skogai
+```
+
+**Actions**
+
+- Bash: `uv tool list 2>&1 | grep -i skogai; uv tool uninstall skogai 2>&1 || uv tool uninstall skogai-cli 2>&1; ls -la ~/.local/…`
+
+## 2026-10-16 13:52 · turn 45e541ad
+
+**User**
+
+> <cross-session-message from="uds:/run/user/1000/cc-socks/12340.sock" from-name="skogai-e4" from-mode="prompting">
+> Gap 1 is closed: ~/.local/bin/skogai is now a symlink to ~/skogai/dash-skogai/bin/skogai. The uv skogai-cli was already uninstalled; skogcli stays. `skogai config get stage.on-stop --show-origin` works by name. CONFIG.md step 1 is now stale, so you can mark it done.
+> </cross-session-message>
+
+**Assistant**
+
+Running `skogai` by name now reaches dash's CLI, so the hooks read `skogai config` instead of only the env vars. `skogai-e4` added the link `~/.local/bin/skogai` → `~/skogai/dash-skogai/bin/skogai`, and `skogai config get stage.on-stop --show-origin` works from marketplace. I've marked step 1 done in `CONFIG.md` and committed it as `eb50b9d`.
+
+That same check reports `env:SKOGAI_STAGE_ON_STOP false`: the env var in this session still overrides every config file. Until whatever sets those `false` values is found, a `.skogai/config` will have no effect on the git steps here. Steps 2 (`--file` layers in dash's CLI), 4 and 5 in `CONFIG.md` are next.
+
+**Actions**
+
+- Bash: `ls -la ~/.local/bin/skogai; cd ~/marketplace && skogai config get stage.on-stop --show-origin; grep -n "^1\. \*\*Fix" pl…`
+- Bash: `cd ~/marketplace && sed -i '93s#.*#1. **Fix `skogai` on `PATH`:** done 2026-10-16. The broken uv `skogai-cli` is uninsta…`
+
+## 2026-10-16 14:31 · turn ebe3e473
+
+**User**
+
+> <cross-session-message from="uds:/run/user/1000/cc-socks/12340.sock" from-name="skogai-e4" from-mode="prompting">
+> Your file-layers patch is applied to ~/skogai/dash-skogai, on skogix's go-ahead. Tested: lists, `~` removal, --scope, --show-origin, set/unset --file, outside-scope exit 2, no-frontmatter files, and a `---` in the body. `list --file .claude/skogai-core.md --scope skogai-core` reads the real skogai-core.local.md. One fix on top: `get` now maps `_`→`-` in the requested key, so `get skogai-core.log_path` matches the flattened `log-path`. Still asymmetric: `set --file` writes the key as typed, so `b_c` and `b-c` stay distinct in the yaml.
+> </cross-session-message>
+
+**Assistant**
+
+skogai-core now reads its settings through the real `skogai config`, now that `skogai-e4` has applied the `--file` change in `~/skogai` (`9ad0067`). With the installed CLI on PATH, all 9 checks in `tests/run.sh` pass, including the one where a value set in the global config file reaches the plugin.
+
+From `~/skogai`, `skogai config list --show-origin --file .claude/skogai-core.md --scope skogai-core` shows every value coming from the real `skogai-core.local.md` there.
+
+In marketplace I marked step 2 done in `CONFIG.md` and deleted the applied patch, committed as `2036f3a`.
+
+**Still open:**
+- **Key spelling:** `get` treats `log_path` and `log-path` as the same key, but `set --file` writes the key exactly as typed. So one file can end up with both `b_c` and `b-c`; I've noted this in `CONFIG.md`.
+- **Step 5 and the daemon restart** are still yours:
+  - Move the git switches into config with `skogai config set --global …`.
+  - Delete the six `SKOGAI_*_ON_*` lines from `~/.config/mise/config.toml`.
+  - Restart the Claude daemon. Until you do, its stale `false` values override every config layer.
+
+**Actions**
+
+- Bash: `cd ~/marketplace; command -v skogai; plugins/skogai-core/tests/run.sh | grep -v '^ok'; plugins/skogai-core/tests/run.sh …`
+- Bash: `cd ~/marketplace/plugins/skogai-core && python3 - <<'EOF'`
+
+## 2026-10-16 15:00 · turn 9a30e214
+
+**User**
+
+> Go ahead with what you can help with and we do a real reboot
+
+**Assistant**
+
+Step 5 was blocked again: the auto-mode classifier denied writing `~/.skogai/config` through `skogai config set --global`. That's outside this repo, so I'm not working around it. Everything inside marketplace is already done and committed. These are the last steps for you to run before the reboot; the `!` prefix runs them in this session so the output lands here:
+
+```sh
+! for k in stage.on-stop stage.on-user-prompt-submit commit.on-stop commit.on-user-prompt-submit; do skogai config set --global $k true; done; cat ~/.skogai/config
+```
+
+Then delete these six lines from the `[env]` table in `~/.config/mise/config.toml`, at lines 197–202:
+
+```toml
+SKOGAI_STAGE_ON_USER_PROMPT_SUBMIT = "true"
+SKOGAI_COMMIT_ON_USER_PROMPT_SUBMIT = "true"
+SKOGAI_COMMIT_ON_STOP = "true"
+SKOGAI_STAGE_ON_STOP = "true"
+SKOGAI_MERGE_ON_STOP = "false"
+SKOGAI_MERGE_ON_USER_PROMPT_SUBMIT = "false"
+```
+
+The reboot also clears the Claude daemon's stale `false` values. After it, this should show `global` as the source for `stage` and `commit`, `base` for `merge`, and no `env:` lines:
+
+```sh
+skogai config list --show-origin
+```
+
+If you still see `env:` lines, something else is still exporting the `SKOGAI_*_ON_*` vars.
+
