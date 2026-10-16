@@ -92,7 +92,7 @@ Never in config, in any layer. Secrets live in fnox and only reach tasks that de
 
 1. **Fix `skogai` on `PATH`.** `~/.local/bin/skogai` is a uv-installed Python skogcli that fails with `ModuleNotFoundError: No module named 'skogai'`, and it shadows dash's `bin/skogai`. Until fixed, nothing can call `skogai config` by name.
 2. **dash `bin/skogai`:** add `--file X.md [--scope NAME]` to `get`/`list`/`set`, with the flattening above, and multi-valued keys (`_resolve` keeps only the last value per key today).
-3. **skogai-core `git-steps.sh`:** read `skogai config get stage.on-stop` and the rest. The env names already match, so this changes nothing until a config file sets a key.
+3. **skogai-core `git-steps.sh`:** done. It reads `skogai config list` from the git root and falls back to the `SKOGAI_*_ON_*` env vars when no working `skogai` is on PATH. The env names match dash's keys, so nothing changes until a config file sets one.
 4. **skogai-core `settings.sh` and `register.ts`:** read `skogai config get --file <root>/.claude/skogai-core.md --scope skogai-core <key>`, keeping the awk reader as the fallback when `skogai` isn't installed. Plugins are shared through the marketplace and must work without dash.
 5. **mise:** move the `SKOGAI_*_ON_*` values into `~/.skogai/config` and source them back through `skogai config env`.
 6. **Delete** `~/marketplace/scripts/parse-frontmatter.sh` and the copies of `validate-settings.sh` / `example.local.md` in `dash-skogai/`, once the dash type checks config.

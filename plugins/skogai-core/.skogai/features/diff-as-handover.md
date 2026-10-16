@@ -12,7 +12,7 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 - Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ON_STOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
-- Git steps are switched by env vars, read by `scripts/git-steps.sh`. All are off unless set to `true`, and run in table order:
+- Git steps are switched by dash's `skogai config` keys (`stage.on-stop`, ...), read by `scripts/git-steps.sh` from the git root, so `.skogai/config` and `~/.skogai/config` apply. Each key's env var overrides it, and without a working `skogai` on PATH the env vars are all there is. All are off unless `true`, and run in table order:
 
   | Variable (`<EVENT>` is `STOP` or `USER_PROMPT_SUBMIT`) | Runs |
   |---|---|
