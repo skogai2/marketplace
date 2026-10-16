@@ -24,81 +24,24 @@ ORIGINAL_SHA=$(shasum -a 256 "$MARKETPLACE_JSON" | awk '{print $1}')
 # Extract the marketplace metadata (everything except plugins array)
 MARKETPLACE_HEADER=$(jq 'del(.plugins)' "$MARKETPLACE_JSON")
 
-# Build one marketplace plugin entry from a plugin.json's contents and a
-# "source" value (a local "./relative/path" string, or a remote source object
-# such as {"source":"url","url":"..."}).
+# Build one marketplace plugin entry: only name, source and description.
+# Everything else (version, author, components) stays in plugin.json, which
+# Claude Code reads anyway; copying components here would duplicate them
+# under strict mode.
 build_plugin_entry() {
     local plugin_data="$1"
     local source_json="$2"
+    local fallback_name="$3"
 
-    local NAME VERSION DESCRIPTION AUTHOR LICENSE HOMEPAGE REPOSITORY
-    local KEYWORDS COMMANDS AGENTS RAW_HOOKS HOOKS MCP_SERVERS SKILLS
-
-    NAME=$(echo "$plugin_data" | jq -r '.name // empty')
-    VERSION=$(echo "$plugin_data" | jq -r '.version // empty')
-    DESCRIPTION=$(echo "$plugin_data" | jq -r '.description // empty')
-    AUTHOR=$(echo "$plugin_data" | jq -c '.author // null')
-    LICENSE=$(echo "$plugin_data" | jq -r '.license // empty')
-    HOMEPAGE=$(echo "$plugin_data" | jq -r '.homepage // empty')
-    REPOSITORY=$(echo "$plugin_data" | jq -r '.repository // empty')
-    KEYWORDS=$(echo "$plugin_data" | jq -c '.keywords // []')
-    COMMANDS=$(echo "$plugin_data" | jq -c '.commands // []')
-    AGENTS=$(echo "$plugin_data" | jq -c '.agents // []')
-    # hooks may be declared as a single string or an array; normalize to an array.
-    RAW_HOOKS=$(echo "$plugin_data" | jq -c '.hooks // [] | if type == "array" then . else [.] end')
-    # hooks/hooks.json is loaded automatically by Claude Code and must not be
-    # declared in manifest.hooks (causes a "duplicate hooks file" error), so
-    # strip it defensively instead of letting it leak into marketplace.json.
-    HOOKS=$(echo "$RAW_HOOKS" | jq -c 'map(select(test("(^|/)hooks/hooks\\.json$") | not))')
-    if [ "$RAW_HOOKS" != "$HOOKS" ]; then
-        echo -e "${RED}  Warning: plugin '$NAME' declares the default hooks/hooks.json in manifest.hooks; remove it there, it's loaded automatically${NC}" >&2
-    fi
-    MCP_SERVERS=$(echo "$plugin_data" | jq -c '.mcpServers // []')
-    SKILLS=$(echo "$plugin_data" | jq -c '.skills // []')
-
-    if [ -z "$NAME" ]; then
-        echo -e "${RED}  Warning: plugin.json has no name, skipping${NC}" >&2
-        return 1
-    fi
-
-    jq -n \
-        --arg name "$NAME" \
-        --argjson source "$source_json" \
-        --arg version "$VERSION" \
-        --arg description "$DESCRIPTION" \
-        --argjson author "$AUTHOR" \
-        --arg license "$LICENSE" \
-        --arg homepage "$HOMEPAGE" \
-        --arg repository "$REPOSITORY" \
-        --argjson keywords "$KEYWORDS" \
-        --argjson commands "$COMMANDS" \
-        --argjson agents "$AGENTS" \
-        --argjson hooks "$HOOKS" \
-        --argjson mcpServers "$MCP_SERVERS" \
-        --argjson skills "$SKILLS" \
-        '{
-            name: $name,
-            source: $source
-        } +
-        (if $version != "" then {version: $version} else {} end) +
-        (if $description != "" then {description: $description} else {} end) +
-        (if $author != null then {author: $author} else {} end) +
-        (if $license != "" then {license: $license} else {} end) +
-        (if $homepage != "" then {homepage: $homepage} else {} end) +
-        (if $repository != "" then {repository: $repository} else {} end) +
-        (if ($keywords | length) > 0 then {keywords: $keywords} else {} end) +
-        (if ($commands | length) > 0 then {commands: $commands} else {} end) +
-        (if ($agents | length) > 0 then {agents: $agents} else {} end) +
-        (if ($hooks | length) > 0 then {hooks: $hooks} else {} end) +
-        (if ($mcpServers | length) > 0 then {mcpServers: $mcpServers} else {} end) +
-        (if ($skills | length) > 0 then {skills: $skills} else {} end)
-    '
+    jq -n --argjson p "$plugin_data" --argjson source "$source_json" --arg fallback "$fallback_name" '
+        ($p.name // $fallback) as $name
+        | {name: $name, source: $source}
+        + (if ($p.description // "") != "" then {description: $p.description} else {} end)'
 }
 
 # --- Local plugins: discovered from */.claude-plugin/plugin.json ---
 
-PLUGIN_FILES=$(find "$REPO_ROOT" -name "plugin.json" -path "*/.claude-plugin/plugin.json" -not -path "$REPO_ROOT/.worktrees/*" -not -path "$REPO_ROOT/.claude/worktrees/*" | \
-    sort)
+PLUGIN_FILES=$(find "$REPO_ROOT/plugins" -mindepth 3 -maxdepth 3 -path "*/.claude-plugin/plugin.json" | sort)
 
 if [ -z "$PLUGIN_FILES" ]; then
     echo -e "${RED}No plugin.json files found!${NC}"
@@ -115,12 +58,11 @@ while IFS= read -r plugin_file; do
     echo "Processing: $plugin_file"
 
     PLUGIN_DIR=$(dirname "$(dirname "$plugin_file")")
-    RELATIVE_PATH=$(realpath --relative-to="$REPO_ROOT" "$PLUGIN_DIR" 2>/dev/null || \
-                    python3 -c "import os.path; print(os.path.relpath('$PLUGIN_DIR', '$REPO_ROOT'))")
-    SOURCE_PATH="./$RELATIVE_PATH"
+    # Bare name: resolved under metadata.pluginRoot (./plugins/).
+    DIR_NAME=$(basename "$PLUGIN_DIR")
 
     PLUGIN_DATA=$(cat "$plugin_file")
-    ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$(jq -n --arg s "$SOURCE_PATH" '$s')") || continue
+    ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$(jq -n --arg s "$DIR_NAME" '$s')" "$DIR_NAME") || continue
 
     PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$ENTRY" '. + [$entry]')
     echo -e "${GREEN}  Added: $(echo "$ENTRY" | jq -r '.name')${NC}"
@@ -164,7 +106,16 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
         [ -n "$REPO_REF" ] && CLONE_ARGS+=(--branch "$REPO_REF")
 
         if ! git clone "${CLONE_ARGS[@]}" "$CLONE_URL" "$DEST" >/dev/null 2>&1; then
-            echo -e "${RED}  Warning: failed to clone '$REPO_NAME' from $CLONE_URL, skipping${NC}"
+            # Keep the existing entry rather than dropping the plugin on a
+            # transient clone failure (no network, no SSH key, ...).
+            KEPT=$(jq -c --arg url "$CLONE_URL" '[.plugins[] | select(.source | type == "object" and (.url == $url or ("https://github.com/" + (.repo // "") + ".git") == $url))] | first // empty' "$MARKETPLACE_JSON")
+            if [ -n "$KEPT" ]; then
+                KEPT=$(echo "$KEPT" | jq -c '{name, source} + (if .description then {description} else {} end)')
+                PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$KEPT" '. + [$entry]')
+                echo -e "${YELLOW}  Warning: failed to clone '$REPO_NAME', kept existing entry '$(echo "$KEPT" | jq -r .name)'${NC}"
+            else
+                echo -e "${RED}  Warning: failed to clone '$REPO_NAME' from $CLONE_URL, skipping${NC}"
+            fi
             continue
         fi
 
@@ -191,7 +142,7 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
         fi
 
         PLUGIN_DATA=$(cat "$EXTERNAL_PLUGIN_FILE")
-        ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$MARKETPLACE_SOURCE") || continue
+        ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$MARKETPLACE_SOURCE" "$REPO_NAME") || continue
 
         PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$ENTRY" '. + [$entry]')
         echo -e "${GREEN}  Added (external): $(echo "$ENTRY" | jq -r '.name')${NC}"

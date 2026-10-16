@@ -1,11 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "0.0.63",
+  "version": "0.0.64",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
     "url": "https://github.com/skogai"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins/"
   },
   "renames": {
     "forge": null,
@@ -20,11 +23,7 @@
         "url": "https://github.com/openai/codex-plugin-cc.git",
         "path": "./plugins/codex"
       },
-      "version": "1.0.6",
-      "description": "Use Codex from Claude Code to review code or delegate tasks.",
-      "author": {
-        "name": "OpenAI"
-      }
+      "description": "Use Codex from Claude Code to review code or delegate tasks."
     },
     {
       "name": "loadout",
@@ -32,14 +31,12 @@
         "source": "url",
         "url": "git@github.com:skogai2/loadout.git"
       },
-      "version": "0.3.0",
-      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element",
-      "author": {
-        "name": "Mattia Carella"
-      },
-      "license": "MIT",
-      "homepage": "https://github.com/MK27MK/loadout",
-      "repository": "https://github.com/MK27MK/loadout"
+      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
+    },
+    {
+      "name": "skogai-core",
+      "source": "skogai-core",
+      "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
     }
   ]
 }

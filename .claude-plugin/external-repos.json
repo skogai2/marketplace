@@ -13,6 +13,6 @@
   {
     "name": "open-knowledge-plugin",
     "source": "url",
-    "repo": "git@github.com:skogai2/open-knowledge-plugin.git"
+    "url": "git@github.com:skogai2/open-knowledge-plugin.git"
   }
 ]
