@@ -1154,3 +1154,39 @@ Use a submodule when you want to edit a plugin or pin it to a version. Use `exte
 - Bash: `cd /home/skogix/marketplace; python3 - <<'EOF'`
 - Bash: `cd /home/skogix/marketplace; bash scripts/generate-marketplace-json.sh --refresh 2>&1 | grep -v Processing; diff <(jq .p…`
 
+## 2026-10-16 10:54 · turn 3626d070
+
+**User**
+
+> - remove --refresh. that is the default way to use this anyway.
+> - if a fetch failes everything should break loudly. something is wrong.
+> - please add codex-plugin-cc to the marketplace directly to show what you propose
+> - not sure what "longer form" means here but okay please go ahead :)
+
+**Assistant**
+
+All three changes are done and running, but `claude plugin validate .` now fails. The failure comes from your commit `cea7f0a`, not from the script.
+
+- **No `--refresh`:** every run fetches each plugin's `plugin.json`. GitHub repos go through `gh api`; other git URLs use a blobless clone that downloads only the manifest.
+- **Failures abort the run:** a bad source type, missing URL, failed clone, missing manifest or manifest without a name stops the script with `Error: …` and exit 1. `marketplace.json` isn't touched.
+- **`external-repos.json` is now just the source objects** that get copied into `marketplace.json` unchanged:
+  ```json
+  [
+    { "source": "url", "url": "https://github.com/skogai2/loadout" },
+    { "source": "git-subdir", "url": "openai/codex-plugin-cc", "path": "plugins/codex" }
+  ]
+  ```
+  The codex entry is the example you asked for: the entry in `marketplace.json` carries exactly that object, plus the name and description fetched from upstream. The "longer form" I mentioned was just this: writing the real source object instead of the old short `name`/`repo`/`path` format. `ref` and `sha` are supported too.
+
+**Why validation fails:** commit `cea7f0a` removed the whole `marketplace.json` header, leaving only `version`. That includes `metadata.pluginRoot`, and without it the bare name `"skogai-core"` is invalid ("must start with `./`"). A marketplace also needs `name` and `owner`. There's also a new `.claude-plugin/plugin.json` at the repo root, a copy of skogai-core's, so the validator now treats the repo root as a plugin as well.
+
+Should I put back `name`, `owner` and `metadata.pluginRoot` and remove the root `plugin.json`? Or did you strip them on purpose?
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; grep -n "REFRESH\|refresh\|External plugins" scripts/generate-marketplace-json.sh; sed -n '…`
+- Bash: `cd /home/skogix/marketplace; python3 - <<'EOF'`
+- Bash: `cd /home/skogix/marketplace; claude plugin validate . 2>&1 | tail -6`
+- Bash: `cd /home/skogix/marketplace; ls -a .claude-plugin; claude plugin validate .claude-plugin/marketplace.json 2>&1 | tail -3…`
+- Bash: `cd /home/skogix/marketplace; git show cea7f0a --stat; jq 'del(.plugins)' .claude-plugin/marketplace.json; cat .claude-pl…`
+

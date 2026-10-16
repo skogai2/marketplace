@@ -16,11 +16,6 @@ TEMP_FILE=$(mktemp)
 CLONE_DIR=$(mktemp -d)
 trap 'rm -rf "$CLONE_DIR"' EXIT
 
-# --refresh re-fetches external plugin metadata instead of using the cache
-# stored in external-repos.json.
-REFRESH=0
-[ "${1:-}" = "--refresh" ] && REFRESH=1
-
 echo -e "${YELLOW}Generating marketplace.json from discovered plugins...${NC}"
 
 # Calculate SHA256 of original file
@@ -75,106 +70,78 @@ done <<< "$PLUGIN_FILES"
 
 # --- External plugins: listed in .claude-plugin/external-repos.json ---
 #
-# Each entry declares where to clone a plugin from (a remote "source" object,
-# same shape used in marketplace.json). The script clones it fresh every run
-# and reads its plugin.json for metadata, exactly like a local plugin -- so
-# these entries are never hand-edited in marketplace.json, only added to
-# external-repos.json.
+# external-repos.json is an array of plugin source objects, exactly as they
+# appear in marketplace.json (github, url or git-subdir). Each run fetches the
+# plugin's .claude-plugin/plugin.json for name and description. Any failure
+# aborts the run before marketplace.json is touched.
+
+die() {
+    echo -e "${RED}Error: $*${NC}" >&2
+    exit 1
+}
 
 if [ -f "$EXTERNAL_REPOS_JSON" ]; then
     EXTERNAL_COUNT=$(jq 'length' "$EXTERNAL_REPOS_JSON")
-    echo -e "${GREEN}Found $EXTERNAL_COUNT external repo(s)${NC}"
-
-    UPDATED_REPOS="[]"
+    echo -e "${GREEN}Found $EXTERNAL_COUNT external plugin(s)${NC}"
 
     for i in $(seq 0 $((EXTERNAL_COUNT - 1))); do
-        REPO_CONF=$(jq -c ".[$i]" "$EXTERNAL_REPOS_JSON")
-        REPO_NAME=$(echo "$REPO_CONF" | jq -r '.name')
-        REPO_SOURCE_TYPE=$(echo "$REPO_CONF" | jq -r '.source')
-        REPO_REF=$(echo "$REPO_CONF" | jq -r '.ref // empty')
-        REPO_PATH=$(echo "$REPO_CONF" | jq -r '.path // empty')
+        SOURCE=$(jq -c ".[$i]" "$EXTERNAL_REPOS_JSON")
+        TYPE=$(echo "$SOURCE" | jq -r '.source')
+        REF=$(echo "$SOURCE" | jq -r '.ref // empty')
+        SHA=$(echo "$SOURCE" | jq -r '.sha // empty')
+        SUBDIR=$(echo "$SOURCE" | jq -r '.path // empty')
         GH_REPO=""
 
-        case "$REPO_SOURCE_TYPE" in
-            url)
-                CLONE_URL=$(echo "$REPO_CONF" | jq -r '.url')
-                ;;
+        case "$TYPE" in
             github)
-                GH_REPO=$(echo "$REPO_CONF" | jq -r '.repo')
-                CLONE_URL="https://github.com/$GH_REPO.git"
+                GH_REPO=$(echo "$SOURCE" | jq -r '.repo')
+                URL="https://github.com/$GH_REPO.git"
+                ;;
+            url)
+                URL=$(echo "$SOURCE" | jq -r '.url')
+                ;;
+            git-subdir)
+                URL=$(echo "$SOURCE" | jq -r '.url')
+                # owner/repo shorthand
+                if [[ "$URL" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+                    GH_REPO="$URL"
+                    URL="https://github.com/$URL.git"
+                fi
                 ;;
             *)
-                echo -e "${RED}  Warning: external repo '$REPO_NAME' has unknown source type '$REPO_SOURCE_TYPE', skipping${NC}"
-                UPDATED_REPOS=$(echo "$UPDATED_REPOS" | jq --argjson r "$REPO_CONF" '. + [$r]')
-                continue
+                die "external entry $i: unsupported source type '$TYPE': $SOURCE"
                 ;;
         esac
-
-        # The marketplace "source" object only carries fields the plugin
-        # loader understands. A repo with a "path" (the plugin lives in a
-        # subdirectory, e.g. a monorepo/marketplace) needs Claude Code's
-        # dedicated "git-subdir" source type rather than a bare url/github
-        # source, since those assume the plugin sits at the repo root.
-        if [ -n "$REPO_PATH" ]; then
-            MARKETPLACE_SOURCE=$(jq -n --arg url "$CLONE_URL" --arg path "$REPO_PATH" --arg ref "$REPO_REF" \
-                '{source: "git-subdir", url: $url, path: $path} + (if $ref != "" then {ref: $ref} else {} end)')
-        else
-            MARKETPLACE_SOURCE=$(echo "$REPO_CONF" | jq -c 'del(.name, .path, .plugin)')
+        [ -n "$URL" ] && [ "$URL" != "null" ] || die "external entry $i has no url/repo: $SOURCE"
+        if [ -z "$GH_REPO" ] && [[ "$URL" =~ github\.com[:/]([^/]+/[^/]+)$ ]]; then
+            GH_REPO="${BASH_REMATCH[1]%.git}"
         fi
 
-        # Cached plugin metadata ({name, description}) lives in the entry's
-        # "plugin" field. Seed it from the current marketplace.json if missing.
-        CACHED=$(echo "$REPO_CONF" | jq -c '.plugin // empty')
-        if [ -z "$CACHED" ]; then
-            CACHED=$(jq -c --argjson src "$MARKETPLACE_SOURCE" \
-                '[.plugins[] | select(.source == $src)] | first // empty | {name} + (if .description then {description} else {} end)' \
-                "$MARKETPLACE_JSON")
-        fi
+        MANIFEST_PATH="${SUBDIR:+${SUBDIR#./}/}.claude-plugin/plugin.json"
+        COMMIT="${SHA:-$REF}"
+        echo "Fetching $MANIFEST_PATH from $URL${COMMIT:+ @ $COMMIT}"
 
         PLUGIN_DATA=""
-        if [ "$REFRESH" = 1 ] || [ -z "$CACHED" ]; then
-            MANIFEST_PATH="${REPO_PATH:+${REPO_PATH#./}/}.claude-plugin/plugin.json"
-            echo "Fetching $MANIFEST_PATH from $REPO_NAME ($CLONE_URL)"
-            if [ -n "$GH_REPO" ] && command -v gh >/dev/null; then
-                PLUGIN_DATA=$(gh api -H "Accept: application/vnd.github.raw" \
-                    "repos/$GH_REPO/contents/$MANIFEST_PATH${REPO_REF:+?ref=$REPO_REF}" 2>/dev/null) || PLUGIN_DATA=""
-            fi
-            if [ -z "$PLUGIN_DATA" ]; then
-                # Sparse, blobless clone: only the manifest's directory is fetched.
-                DEST="$CLONE_DIR/$REPO_NAME"
-                CLONE_ARGS=(--depth 1 --quiet --filter=blob:none --sparse)
-                [ -n "$REPO_REF" ] && CLONE_ARGS+=(--branch "$REPO_REF")
-                if git clone "${CLONE_ARGS[@]}" "$CLONE_URL" "$DEST" >/dev/null 2>&1 &&
-                   git -C "$DEST" sparse-checkout set --no-cone "/$MANIFEST_PATH" >/dev/null 2>&1 &&
-                   [ -f "$DEST/$MANIFEST_PATH" ]; then
-                    PLUGIN_DATA=$(cat "$DEST/$MANIFEST_PATH")
-                fi
-            fi
-            if [ -n "$PLUGIN_DATA" ]; then
-                CACHED=$(jq -n --argjson p "$PLUGIN_DATA" --arg fallback "$REPO_NAME" \
-                    '{name: ($p.name // $fallback)} + (if ($p.description // "") != "" then {description: $p.description} else {} end)')
-            elif [ -n "$CACHED" ]; then
-                echo -e "${YELLOW}  Warning: could not fetch '$REPO_NAME', using cached metadata${NC}"
-            fi
+        if [ -n "$GH_REPO" ] && command -v gh >/dev/null; then
+            PLUGIN_DATA=$(gh api -H "Accept: application/vnd.github.raw" \
+                "repos/$GH_REPO/contents/$MANIFEST_PATH${COMMIT:+?ref=$COMMIT}" 2>/dev/null) || PLUGIN_DATA=""
+        fi
+        if [ -z "$PLUGIN_DATA" ]; then
+            # Blobless sparse clone: only the manifest is downloaded.
+            DEST="$CLONE_DIR/$i"
+            git clone --quiet --no-checkout --filter=blob:none ${REF:+--branch "$REF"} "$URL" "$DEST" \
+                || die "could not clone $URL"
+            PLUGIN_DATA=$(git -C "$DEST" show "${SHA:-HEAD}:$MANIFEST_PATH" 2>/dev/null) \
+                || die "$URL has no $MANIFEST_PATH${COMMIT:+ at $COMMIT}"
         fi
 
-        if [ -z "$CACHED" ]; then
-            echo -e "${RED}  Warning: no metadata for '$REPO_NAME' (fetch failed, nothing cached), skipping${NC}"
-            UPDATED_REPOS=$(echo "$UPDATED_REPOS" | jq --argjson r "$REPO_CONF" '. + [$r]')
-            continue
-        fi
+        echo "$PLUGIN_DATA" | jq -e '.name | type == "string" and length > 0' >/dev/null 2>&1 \
+            || die "$URL: $MANIFEST_PATH is not valid JSON or has no name"
 
-        UPDATED_REPOS=$(echo "$UPDATED_REPOS" | jq --argjson r "$REPO_CONF" --argjson c "$CACHED" '. + [$r + {plugin: $c}]')
-        ENTRY=$(build_plugin_entry "$CACHED" "$MARKETPLACE_SOURCE" "$REPO_NAME") || continue
-
+        ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$SOURCE" "")
         PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$ENTRY" '. + [$entry]')
         echo -e "${GREEN}  Added (external): $(echo "$ENTRY" | jq -r '.name')${NC}"
     done
-
-    echo "$UPDATED_REPOS" | jq '.' > "$CLONE_DIR/external-repos.json"
-    cmp -s "$CLONE_DIR/external-repos.json" "$EXTERNAL_REPOS_JSON" || cp "$CLONE_DIR/external-repos.json" "$EXTERNAL_REPOS_JSON"
-else
-    echo "No external-repos.json found, skipping external plugins"
 fi
 
 # Sort plugins alphabetically by name
