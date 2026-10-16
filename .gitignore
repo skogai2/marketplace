@@ -4,3 +4,4 @@
 
 # per-user plugin settings
 .claude/*.local.md
+/.skogai/tmp/git-diff

@@ -1,5 +1,16 @@
 {
   "hooks": {
-    "PostToolUse": []
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in *.json) jq empty \"$f\" || { echo \"Invalid JSON in $f\" >&2; exit 2; };; esac",
+            "statusMessage": "Validating JSON"
+          }
+        ]
+      }
+    ]
   }
 }
