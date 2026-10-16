@@ -8,21 +8,28 @@
     "pluginRoot": "./plugins/",
     "description": "skogai marketplace"
   },
+  "version": "1.0.1",
   "plugins": [
     {
-      "name": "skogai-core",
-      "source": "skogai-core",
-      "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
-    },
-    {
       "name": "loadout",
-      "source": "loadout",
-      "description": "change loadouts in claude code"
+      "source": "./plugins/loadout",
+      "version": "0.3.0",
+      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element",
+      "author": {
+        "name": "Mattia Carella"
+      },
+      "license": "MIT",
+      "homepage": "https://github.com/MK27MK/loadout",
+      "repository": "https://github.com/MK27MK/loadout"
     },
     {
-      "name": "open-knowledge-plugin",
-      "source": "open-knowledge-plugin",
-      "description": "open knowledge format plugin"
+      "name": "skogai-core",
+      "source": "./plugins/skogai-core",
+      "version": "0.6.0",
+      "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line.",
+      "author": {
+        "name": "Emil Skogsund"
+      }
     }
   ]
 }
