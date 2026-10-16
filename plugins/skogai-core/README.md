@@ -82,6 +82,10 @@ tests/run.sh                 tests the scripts in a throwaway git repo
 
 A script can also answer back the way any command hook can, with exit code 2 or JSON on stdout.
 
+## Config
+
+Reading settings through dash's `skogai config`, with frontmatter files as extra layers, is proposed in [CONFIG.md](CONFIG.md).
+
 ## Learnings
 
 See [LEARNINGS.md](LEARNINGS.md).
