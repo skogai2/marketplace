@@ -1190,3 +1190,28 @@ Should I put back `name`, `owner` and `metadata.pluginRoot` and remove the root 
 - Bash: `cd /home/skogix/marketplace; ls -a .claude-plugin; claude plugin validate .claude-plugin/marketplace.json 2>&1 | tail -3…`
 - Bash: `cd /home/skogix/marketplace; git show cea7f0a --stat; jq 'del(.plugins)' .claude-plugin/marketplace.json; cat .claude-pl…`
 
+## 2026-10-16 11:10 · turn 385c3f07
+
+**User**
+
+> it seems like those are not generated it looks like. so they will probably be overwritten over and over unless we manage it someway no?
+
+**Assistant**
+
+The fields now have their own file, `.claude-plugin/marketplace-header.json`, so the script fully generates `marketplace.json` and `claude plugin validate` passes on it again.
+
+One correction to "overwritten": the script was already copying those fields from the existing `marketplace.json` on each run. They disappeared because commit `cea7f0a` removed them from that file. With the separate file, editing `marketplace.json` can't lose them anymore.
+
+- **The header file** holds `$schema`, `name`, `description`, `owner`, `metadata.pluginRoot` and `renames`, which I restored from the commit before `cea7f0a`.
+- **`version`** is the only field still read from the current `marketplace.json`, and the script bumps it whenever the content changes.
+- **The script stops with an error** if the header file is missing `name`, `owner.name` or `metadata.pluginRoot`.
+- **`CLAUDE.md`** now lists all three input files and says never to hand-edit `marketplace.json`.
+
+The `.claude-plugin/plugin.json` at the repo root is still there, and I left it alone. Because of it, `claude plugin validate .` checks the repo root as a plugin, which only produces the `CLAUDE.md` warning. Nothing is committed.
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; git show cea7f0a~1:.claude-plugin/marketplace.json | jq 'del(.plugins, .version)'; grep -n …`
+- Bash: `cd /home/skogix/marketplace; git show cea7f0a~1:.claude-plugin/marketplace.json | jq 'del(.plugins, .version)' > .claude…`
+- Edit `CLAUDE.md`
+

@@ -1,20 +1,45 @@
 {
-  "version": "1.0.1",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skogai-marketplace",
+  "version": "1.0.2",
+  "description": "skogai-marketplace",
+  "owner": {
+    "name": "skogix",
+    "url": "https://github.com/skogai"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins/"
+  },
+  "renames": {
+    "forge": null,
+    "verity": null,
+    "jetbrains-router": null
+  },
   "plugins": [
     {
       "name": "codex",
       "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/openai/codex-plugin-cc.git",
-        "path": "./plugins/codex"
+        "name": "codex-plugin-cc",
+        "source": "github",
+        "repo": "openai/codex-plugin-cc",
+        "path": "./plugins/codex",
+        "plugin": {
+          "name": "codex",
+          "description": "Use Codex from Claude Code to review code or delegate tasks."
+        }
       },
       "description": "Use Codex from Claude Code to review code or delegate tasks."
     },
     {
       "name": "loadout",
       "source": {
+        "name": "skogai-loadout",
         "source": "url",
-        "url": "https://github.com/skogai2/loadout"
+        "url": "https://github.com/skogai2/loadout",
+        "plugin": {
+          "name": "loadout",
+          "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
+        }
       },
       "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
     },

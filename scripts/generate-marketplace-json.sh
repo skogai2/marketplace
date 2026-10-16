@@ -12,6 +12,7 @@ NC='\033[0m' # No Color
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
 EXTERNAL_REPOS_JSON="$REPO_ROOT/.claude-plugin/external-repos.json"
+HEADER_JSON="$REPO_ROOT/.claude-plugin/marketplace-header.json"
 TEMP_FILE=$(mktemp)
 CLONE_DIR=$(mktemp -d)
 trap 'rm -rf "$CLONE_DIR"' EXIT
@@ -21,8 +22,15 @@ echo -e "${YELLOW}Generating marketplace.json from discovered plugins...${NC}"
 # Calculate SHA256 of original file
 ORIGINAL_SHA=$(shasum -a 256 "$MARKETPLACE_JSON" | awk '{print $1}')
 
-# Extract the marketplace metadata (everything except plugins array)
-MARKETPLACE_HEADER=$(jq 'del(.plugins)' "$MARKETPLACE_JSON")
+# Marketplace metadata comes from marketplace-header.json; only "version" is
+# carried over from the current marketplace.json (it's bumped below).
+jq -e '.name and .owner.name and .metadata.pluginRoot' "$HEADER_JSON" >/dev/null 2>&1 || {
+    echo -e "${RED}Error: $HEADER_JSON missing or lacks name, owner.name or metadata.pluginRoot${NC}" >&2
+    exit 1
+}
+MARKETPLACE_HEADER=$(jq -n --slurpfile h "$HEADER_JSON" --slurpfile m "$MARKETPLACE_JSON" \
+    '$h[0] as $h | {"$schema": $h["$schema"], name: $h.name, version: ($m[0].version // "1.0.0")} + ($h | del(.version))
+     | with_entries(select(.value != null))')
 
 # Build one marketplace plugin entry: only name, source and description.
 # Everything else (version, author, components) stays in plugin.json, which
