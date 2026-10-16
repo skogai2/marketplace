@@ -1,7 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "skogai-market",
-  "version": "0.0.61",
+  "name":" skogai-marketplace",
   "description": "skogai-market",
   "owner": {
     "name": "skogix",
