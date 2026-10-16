@@ -1054,3 +1054,43 @@ The two SSH clones (`loadout` and `open-knowledge-plugin`) fail from this sessio
 - Bash: `cd /home/skogix/marketplace; f=.claude-plugin/marketplace.json; jq '. as $m | {"$schema", name, version, description, ow…`
 - Edit `CLAUDE.md`
 
+## 2026-10-16 10:34 · turn 051799ba
+
+**User**
+
+> great! 
+>
+> now maybe instead we could make it better instead of whineing, bitching and so on? what would you maybe propose as changes?    
+>
+> 1. for example where is the plugins currently cloned to? is this needed? what about submodules we want etc etc?
+
+**Assistant**
+
+**Where clones go:** each external repo is shallow-cloned into a `mktemp -d` directory, and the whole directory is deleted when the script exits. The only thing the script reads from a clone is `name` and `description` in its `plugin.json`, so cloning every repo on every run is mostly wasted work.
+
+What I'd change:
+
+1. **Stop cloning.** Two ways to do it:
+   - **Fetch just the manifest.** For GitHub repos, `gh api repos/<repo>/contents/<path>/.claude-plugin/plugin.json` gets the file with no clone. Other git URLs need a sparse clone: `git clone --depth 1 --filter=blob:none --sparse`, then check out only `.claude-plugin/`.
+   - **Cache the entries in `external-repos.json`.** Store `name` and `description` there, and refresh them only with `--refresh`. Normal runs then need no network at all.
+
+2. **Make `external-repos.json` the source shape directly.** The `url`/`github`/`path`-to-`git-subdir` translation exists only because that file uses its own format. If each entry already holds the real marketplace `source` object, the script just passes it through. That would also have prevented the `repo`/`url` mixup.
+
+3. **Submodules for plugins you want a local copy of.** If you want to hack on or pin a plugin, `git submodule add <url> plugins/<name>`. The local discovery already handles that: it gets a bare-name source automatically, with no `external-repos.json` entry needed. So there are two tiers:
+   - **Submodule under `plugins/`:** you edit or pin it.
+   - **`external-repos.json`:** you only list it, and installs pull upstream.
+
+   One thing I couldn't confirm: the docs don't say whether `/plugin marketplace add` initializes submodules when it clones the marketplace. If it doesn't, users get empty directories. Test it with one submodule before converting `loadout`.
+
+4. **Small cleanups:**
+   - Discovery only checks `plugins/*`, so a `plugins/<name>` without a `plugin.json` is skipped silently. It should warn instead.
+   - The script still bumps the marketplace version on every content change, which is fine to keep.
+   - Add a `--check` mode that exits non-zero if the output would differ. That covers the pre-commit hook item in `TODO.md`.
+
+I'd do 1 (cache with `--refresh`), 2 and 4 now, and leave 3 until you've tested how marketplace installs handle submodules. Want me to go ahead?
+
+**Actions**
+
+- Bash: `cd /home/skogix/marketplace; grep -rn -i "submodule" docs/plugins/*.md | head -10`
+- Bash: `cd /home/skogix/marketplace; grep -rln -i "submodule" docs | head; grep -rn -i "submodule" docs | head -5`
+
