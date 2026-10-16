@@ -6,9 +6,8 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build, test suite, or 
 
 ## Layout
 
-- `metadata.pluginRoot` is `./plugins/`, so each plugin `source` is a bare name resolved under `plugins/` (`"skogai-core"` → `plugins/skogai-core`). `pluginRoot` is ignored for sources starting with `./` — those resolve from the repo root (see `docs/plugins/marketplace-reference.md`, "Bare names under pluginRoot"). All plugins, including submodules, live under `plugins/`.
+- `metadata.pluginRoot` is `./plugins/`, so each plugin `source` is a bare name resolved under `plugins/` (`"skogai-core"` → `plugins/skogai-core`). `pluginRoot` is ignored for sources starting with `./` — those resolve from the repo root (see `docs/plugins/marketplace-reference.md`, "Bare names under pluginRoot"). All local plugins live under `plugins/`; external ones are listed in `.claude-plugin/external-repos.json`.
 - Marketplace entries carry only `name`, `source`, `description`; `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
-- Some plugins are git submodules (see `.gitmodules`). Run `git submodule update --init` before touching them — uninitialized submodules are empty directories.
 - `docs/` is a synced snapshot of the Claude Code docs (date in `docs/synced-at.txt`). Treat it as the read-only reference for plugin/hook/marketplace APIs; never edit it.
 - `todo/` holds reference material to review and, where useful, merge into or add as marketplace plugins. `todo/marketplace-repo-conventions.md` documents this repo's conventions.
 
