@@ -1,21 +1,11 @@
 [
   {
-    "name": "skogai-loadout",
     "source": "url",
-    "url": "https://github.com/skogai2/loadout",
-    "plugin": {
-      "name": "loadout",
-      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
-    }
+    "url": "https://github.com/skogai2/loadout.git"
   },
   {
-    "name": "codex-plugin-cc",
-    "source": "github",
-    "repo": "openai/codex-plugin-cc",
-    "path": "./plugins/codex",
-    "plugin": {
-      "name": "codex",
-      "description": "Use Codex from Claude Code to review code or delegate tasks."
-    }
+    "source": "git-subdir",
+    "url": "https://github.com/openai/codex-plugin-cc.git",
+    "path": "plugins/codex"
   }
 ]
