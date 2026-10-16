@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "0.0.62",
+  "version": "0.0.63",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -25,18 +25,6 @@
       "author": {
         "name": "OpenAI"
       }
-    },
-    {
-      "name": "loadout",
-      "source": "./plugins/loadout",
-      "version": "0.3.0",
-      "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element",
-      "author": {
-        "name": "Mattia Carella"
-      },
-      "license": "MIT",
-      "homepage": "https://github.com/MK27MK/loadout",
-      "repository": "https://github.com/MK27MK/loadout"
     },
     {
       "name": "loadout",
