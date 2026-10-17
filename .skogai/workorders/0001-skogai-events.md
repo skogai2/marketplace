@@ -38,7 +38,7 @@ sources:
 2. **Each event is a `type: event` instance with its own JSON schema.** Every event is already a JSON row appended to a jsonl, an immutable linked list. The schema describes that row's `input`.
 3. **Rename to skogai-events.** `core` is a bigger concept; `events` is what the plugin literally does.
 4. **argc + mise** for the tooling.
-5. **Owners: the parent owns the folder.** `type` owns `type/event/`; each event instance owns its own `type/event/<name>.md` and `<name>.schema.json`.
+5. **Ownership is one step.** `type` owns `type/event.md` and `type/event.schema.json`; `event` owns its instances, `type/event/<name>.md`, `<name>.schema.json` and `scripts/event/<name>.sh`.
 6. **Opt-in.** Every event ships off. A repo turns one on with `enabled: true`; a missing event file is off.
 7. **Pinned files mirror dash.** The plugin keeps its copy at `type/event/`, the same paths as dash, so dash diffs apply as they are.
 8. **Logs and tmp are throwaway.** `.skogai/logs/` and `.skogai/tmp/` are never kept across a change: the rename drops the old log, and the new one is `.skogai/logs/event.jsonl`, without a plugin name.
@@ -68,14 +68,14 @@ sources:
 
 ### A. dash-skogai: define `event`
 
-- [ ] **A1. `type/event.md`**: `type: type`, `title: event`. It states:
+- [x] **A1. `type/event.md`**: `type: type`, `title: event`. It states:
   - **fields** every instance has: `type`, `title`, and the schema it points at.
   - **owns**: `type/event/<name>.md`, `type/event/<name>.schema.json`, `scripts/event/<name>.sh`.
   - **writes**: the event log.
-  - **watches**: the default list.
+  - **watches**: none at type level; an instance adds its own.
   - **entrypoint**: `scripts/event/<name>.sh` gets the hook's JSON on stdin. It may answer the way any command hook does: exit 0, exit 2, or JSON on stdout. It appends exactly one row.
   - **defaults**: the log path (`.skogai/logs/event.jsonl`) and the starting watch list. No event is on by default (decision 6). Their keys go in dash's base `config`.
-- [ ] **A2. The row schema**: `type/event.schema.json` for `{ts, event, action?, input}`.
+- [x] **A2. The row schema**: `type/event.schema.json` validates event instances; the row `{ts, event, action?, input}` is its `$defs/row`, which each `<name>.schema.json` narrows.
 - [ ] **A3. One instance per hook event**: `type/event/<Name>.md` and `<Name>.schema.json` for each of the 13. Write each schema's `input` from the hooks reference (`docs/hooks.md` in marketplace). Mark the fields other events depend on as required, such as `prompt_id` and `agent_id` for `Stop`.
 - [ ] **A4. `trigger.when`**: names an `event` instance. Paths stay with `watches`.
 - [ ] **A5.** List `event` in `type/index.md`; `mise run dash:check` reports `errors=0`.
