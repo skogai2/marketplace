@@ -1859,3 +1859,22 @@ chore: update session journal
 
 - Bash: `rtk git -C /home/skogix/.local/src/marketplace diff --cached --stat && rtk git -C /home/skogix/.local/src/marketplace di…`
 
+## 2026-10-17 16:04 · turn d2537796
+
+**User**
+
+
+
+**Assistant**
+
+Both are committed, and `dash:check` still hasn't been run on any of it.
+
+- **dash (`93be788`, in `~/skogai`, not pushed):** this commits the event type, its schema and one-step ownership. `type` owns `type/event.md` and `type/event.schema.json`; `event` owns `type/event/<name>.md`, `<name>.schema.json` and `scripts/event/<name>.sh`. Your own uncommitted changes there (`herdr.md`, `wt.md` and others) are not part of the commit.
+- **Marketplace (`33b081a`, pushed):** A1 and A2 are ticked in the workorder. I also corrected decision 5 there: it still said "the parent owns the folder", so it now describes one-step ownership like dash.
+
+Next is A3: one file and one schema per event in `type/event/`. One choice before I start: dash's file names are lowercase (`gita.md`), while event names are written like `Stop`. I'd name the files `stop.md` and keep `title: Stop`, unless you'd rather have `Stop.md`.
+
+**Actions**
+
+- Bash: `cd ~/skogai; git add dash-skogai/type/event.md dash-skogai/type/event.schema.json dash-skogai/type/type.md dash-skogai/t…`
+
