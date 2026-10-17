@@ -63,6 +63,8 @@ hooks/hooks.json             the events we act upon, plus the status-line module
 hooks/register.ts            the status-line mod: shows the log's last event
 scripts/events/<Event>.sh    one script per event, run with the event's JSON on stdin
 scripts/append-json.sh       appends one row to the log: <json> | append-json.sh [action]
+scripts/git-steps.sh         runs the switched-on git steps: git-steps.sh <EVENT> <root>
+scripts/write-state.sh       writes git-diff, git-diff-cached, wt-step-diff to .skogai/tmp/
 scripts/settings.sh          sourced by the scripts: reads .claude/skogai-core.local.md
 scripts/validate-settings.sh checks a settings file: validate-settings.sh [path]
 examples/skogai-core.local.md  settings to copy into a project

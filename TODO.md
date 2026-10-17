@@ -20,5 +20,5 @@ Manual steps from CLAUDE.md that could be enforced instead of remembered.
 
 ## User input
 
-- [ ] add `git diff` and `git diff --cached` generation to ./tmp/git-diff and ./tmp/git-diff-cached
+- [x] add `git diff` and `git diff --cached` generation to `.skogai/tmp/git-diff` and `.skogai/tmp/git-diff-cached` (`scripts/write-state.sh`)
 - [ ] add a "user messages"-log for only user messages. end goal being "look over user messages and see if potential changes of intent have happened and set up new tasks for them"
