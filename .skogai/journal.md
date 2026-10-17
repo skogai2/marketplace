@@ -1663,3 +1663,52 @@ skogai config list --show-origin
 
 If you still see `env:` lines, something else is still exporting the `SKOGAI_*_ON_*` vars.
 
+## 2026-10-17 08:21 · turn d150fab7
+
+**User**
+
+> hi claude! time to continue with some plugins and definitions to tighten this up!
+
+**Assistant**
+
+Hi! I fixed a breakage before starting anything new. The fix is committed as `f3c04c8`, and all skogai-core tests pass again (2 were failing).
+
+**What broke:** dash commit `820af35` changed how config keys become env var names. Dashes are now dropped, so `stage.on-stop` became `SKOGAI_STAGE_ONSTOP`, where it used to be `SKOGAI_STAGE_ON_STOP`. skogai-core still used the old names. Now:
+- **Git steps:** `git-steps.sh` falls back to the new env names when `skogai` isn't on PATH, and the test sets the new name.
+- **Docs:**
+  - The README, DIFF-AS-CONTEXT.md, `diff-as-handover.md` and the example now show the new names.
+  - The git-step switches are described as config keys, not env vars set through mise.
+  - CONFIG.md is marked as steps 1–4 built and 5–6 open, and FEATURES.md no longer calls config "Proposed".
+- **Cleanup:** I removed the empty `.skogai/CLAUDE.md` that `CLAUDE.md` was importing.
+
+**Side effect of the new rule:** `on-stop` and `onstop` now map to the same env name. I added this to the decisions list in CONFIG.md.
+
+**Security:** `~/.config/mise/config.toml:212` has a plaintext `SKOGAI_OLLAMA_API_KEY`. That breaks the "secrets only in fnox" rule in CONFIG.md, so it should move into `/skogai/fnox.toml`, and you may want to rotate the key.
+
+What's left to tighten:
+1. **mise (step 5):** delete the commented-out `SKOGAI_*_ON_*` lines in mise and put any values you want into `~/.skogai/config`.
+2. **Old copies (step 6):** delete `scripts/parse-frontmatter.sh` and the copies of `validate-settings.sh` and `example.local.md` in dash.
+3. **dash bug:** `set --file` saves the key exactly as typed, so `b_c` and `b-c` can both end up in one file.
+4. **Your decisions in CONFIG.md:** whether layers 1–3 stay git-config while files use frontmatter, where the global layer lives, and whether keys must be declared by types.
+5. **dash TODO definitions:** the trigger/event split, renaming task to workorder, and dropping spec.
+
+Which one do you want to start with?
+
+**Actions**
+
+- Bash: `rtk git log --oneline -15 && rtk ls plugins todo && rtk find plugins/skogai-core -maxdepth 1 && rtk ls /home/skogix/skog…`
+- Bash: `cd plugins/skogai-core && rtk ls -la && rtk read CLAUDE.md FEATURES.md && rtk read /home/skogix/skogai/.skogai/memory/co…`
+- Bash: `rtk read CONFIG.md; rtk find .skogai -type f | head -50; rtk read .skogai/CLAUDE.md`
+- Bash: `rtk wc -c .skogai/CLAUDE.md; rtk ls ~/.local/src/marketplace/scripts/ ~/skogai/dash-skogai/; rtk ls ~/skogai/dash-skogai…`
+- Bash: `sed -n 195,215p ~/.config/mise/config.toml | rtk grep -v API_KEY; rtk ls -la ~/.config/skogai 2>&1; rtk read ~/skogai/da…`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; rtk read scripts/git-steps.sh; skogai config env; skogai config list --…`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; grep -rn "SKOGAI_\|ON_STOP\|_ON_" --include=* -I . | grep -v "^./.skoga…` (failed)
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; grep -rnI "SKOGAI_" . | rtk grep -v "^./.skogai/logs"`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; bash tests/run.sh 2>&1 | tail -20`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
+- Bash: `cd ~/.local/src/marketplace && rtk git add -A plugins/skogai-core && rtk git commit -q -m "skogai-core: env names follow…`
+

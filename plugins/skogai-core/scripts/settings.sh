@@ -13,7 +13,7 @@ SKOGAI_SETTINGS=${SKOGAI_SETTINGS:-$root/.claude/skogai-core.local.md}
 
 # The resolved settings as key=value lines, one per list item. dash's
 # `skogai config` folds its base, global and local layers, then this file and
-# its .local.md, then env (SKOGAI_SKOGAI_CORE_<KEY>). Without a `skogai` that
+# its .local.md, then env (SKOGAI_SKOGAICORE_<KEY>). Without a `skogai` that
 # knows --file, only the .local.md is read, by the awk below.
 SKOGAI_RESOLVED=$(cd "$root" 2>/dev/null &&
   skogai config list --file "${SKOGAI_SETTINGS%.local.md}.md" --scope skogai-core 2>/dev/null) ||

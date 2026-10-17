@@ -10,15 +10,15 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 ## Status
 
-- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ON_STOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
+- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ONSTOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
 - Git steps are switched by dash's `skogai config` keys (`stage.on-stop`, ...), read by `scripts/git-steps.sh` from the git root, so `.skogai/config` and `~/.skogai/config` apply. Each key's env var overrides it, and without a working `skogai` on PATH the env vars are all there is. All are off unless `true`, and run in table order:
 
-  | Variable (`<EVENT>` is `STOP` or `USER_PROMPT_SUBMIT`) | Runs |
+  | Env (`<EVENT>` is `STOP` or `USERPROMPTSUBMIT`) | Runs |
   |---|---|
-  | `SKOGAI_STAGE_ON_<EVENT>` | `git add -A` |
-  | `SKOGAI_COMMIT_ON_<EVENT>` | `wt step commit`, skipped when the tree is clean |
-  | `SKOGAI_MERGE_ON_<EVENT>` | `wt merge --no-remove` |
+  | `SKOGAI_STAGE_ON<EVENT>` | `git add -A` |
+  | `SKOGAI_COMMIT_ON<EVENT>` | `wt step commit`, skipped when the tree is clean |
+  | `SKOGAI_MERGE_ON<EVENT>` | `wt merge --no-remove` |
 
   A failed `wt` step is logged with `(failed)` and doesn't fail the hook.
 - Step 3 is half built: `scripts/write-state.sh` overwrites the three files on `SessionStart`, and on `UserPromptSubmit` and `Stop` after the git steps. `.skogai/tmp/` holds a `.gitignore` of `*`, so staging never picks the files up. Without `wt`, `wt-step-diff` is left empty. Nothing feeds the files into context yet.

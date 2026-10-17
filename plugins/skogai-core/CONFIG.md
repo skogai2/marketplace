@@ -1,6 +1,6 @@
 # Config: one key space, two formats
 
-Status: **proposed**. skogai-core's own settings (`scripts/settings.sh`, `.claude/skogai-core.local.md`) work today and are the first thing to port.
+Status: **steps 1–4 built**, 5–6 open (see [Changes, in order](#changes-in-order)).
 
 ## In one paragraph
 
@@ -17,7 +17,7 @@ Facts gathered with the `skogai-69` and `skogai-e4` sessions on 2026-10-16.
 | CLI | `~/skogai/dash-skogai/bin/skogai` | argc + `git config -f`. `get`/`set`/`unset`/`list` with `--show-origin`, `env` (export lines), `files` |
 | Global layer | `~/.skogai/config` or `$SKOGAI_GLOBAL_CONFIG` | Missing. `~/.skogai` is a git repo holding only `.skogai/logs` |
 | Local layer | `<repo>/.skogai/config` or `$SKOGAI_LOCAL_CONFIG` | Missing everywhere |
-| Git-step env | `~/.config/mise/config.toml:197-202` | `SKOGAI_{STAGE,COMMIT,MERGE}_ON_*`. Already dash's env names for `stage.on-stop` etc. |
+| Git-step env | `~/.config/mise/config.toml:203-208` | `SKOGAI_{STAGE,COMMIT,MERGE}_ON_*`, commented out. Old names: dash's rule now gives `SKOGAI_STAGE_ONSTOP` |
 | Who/mode env | `/skogai/mise.toml:13-15` | `SKOGAI_USER` (claude/skogix), `SKOGAI_MODE` (remote/workstation), `FNOX_PROFILE` |
 | `XDG_SKOGAI_DIR`, `XDG_SKOGAI_CONFIG_DIR` | systemd user environment | Source file unknown. No config layer uses them |
 | Secrets | `/skogai/fnox.toml` | age-encrypted, profiles `skogix` and `claude`. Only reach tasks that list them |
@@ -37,7 +37,7 @@ resolve = fold(replace-per-key, [base, global, local, file, file.local, env])
 | 3 | local | `<repo>/.skogai/config` (`$SKOGAI_LOCAL_CONFIG`) | git-config |
 | 4 | file | `X.md`, only with `--file X.md` | frontmatter |
 | 5 | file local | `X.local.md`, comes with 4 | frontmatter |
-| 6 | env | `SKOGAI_A_B_C` for key `a.b-c` | env |
+| 6 | env | `SKOGAI_A_BC` for key `a.b-c` | env |
 
 Layers 1–3 and 6 are dash's spec, unchanged. 4–5 are the addition: a document's frontmatter, plus its `.local.md` overlay the way `CLAUDE.md` has `CLAUDE.local.md`. There is no separate "project layer": a repo is layer 3, and anything finer is a file.
 
@@ -92,18 +92,18 @@ Never in config, in any layer. Secrets live in fnox and only reach tasks that de
 
 1. **Fix `skogai` on `PATH`:** done 2026-10-16. The broken uv `skogai-cli` is uninstalled and `~/.local/bin/skogai` links to `~/skogai/dash-skogai/bin/skogai`.
 2. **dash `bin/skogai`:** done in `~/skogai` commit `9ad0067`. It adds `--file` (repeatable) and `--scope` to `get`/`list`/`env`/`files`, plus `set`/`unset --file`, which write `x.local.md`. Lists print one item per line, `~` removes a key, and an unreadable layer exits `2`. `get` reads `_` as `-`. Still open: `set --file` writes the key as typed, so `b_c` and `b-c` can both end up in one file.
-3. **skogai-core `git-steps.sh`:** done. It reads `skogai config list` from the git root and falls back to the `SKOGAI_*_ON_*` env vars when no working `skogai` is on PATH. The env names match dash's keys, so nothing changes until a config file sets one.
+3. **skogai-core `git-steps.sh`:** done. It reads `skogai config list` from the git root and falls back to env (`SKOGAI_STAGE_ONSTOP`, ...) when no working `skogai` is on PATH, with the names dash's rule gives (`.` → `_`, `-` dropped, since dash `820af35`).
 4. **skogai-core `settings.sh` and `register.ts`:** done. Both read `skogai config list --file <root>/.claude/skogai-core.md --scope skogai-core` and fall back to reading the `.local.md` themselves when `skogai` doesn't know `--file`, for a `skogai` without `--file` (another machine, or none installed). Keys are kebab-case (`log-path`); `_` still reads.
-5. **mise:** move the `SKOGAI_*_ON_*` values into `~/.skogai/config` and source them back through `skogai config env`.
+5. **mise:** the `SKOGAI_*_ON_*` lines in `~/.config/mise/config.toml` are commented out and use the old names. Put the values in `~/.skogai/config` instead, and drop the lines.
 6. **Delete** `~/marketplace/scripts/parse-frontmatter.sh` and the copies of `validate-settings.sh` / `example.local.md` in `dash-skogai/`, once the dash type checks config.
 
 ## Decisions for skogix
 
 - **Format split.** This doc proposes git-config for layers 1–3, frontmatter for files. The alternative is frontmatter everywhere (`.skogai/config.md`), which makes dash's existing CLI and spec change.
 - **Global layer.** `~/.skogai/config`, as dash says, or `/skogai` per decision 0005, or `$XDG_SKOGAI_CONFIG_DIR`? Today `~/.skogai` is nearly empty and the XDG vars are set but used by nothing.
-- **Where the XDG vars come from.** They're in the systemd user environment with no known source file. And this session's `SKOGAI_*` are all `false` while mise says `true`.
+- **Where the XDG vars come from.** They're in the systemd user environment with no known source file. No session sets `SKOGAI_*_ON_*` any more: the mise lines are commented out.
 - **Strict keys** (dash TODO "strict keys declared by types, or free-form?"). A type could declare a plugin's keys, types and defaults, and its defaults would be the base layer for that scope.
-- **Env names for scoped keys.** `skogai-core.events` → `SKOGAI_SKOGAI_CORE_EVENTS` follows dash's rule but is clumsy.
+- **Env names for scoped keys.** `skogai-core.log-path` → `SKOGAI_SKOGAICORE_LOGPATH`. Dropping `-` means `on-stop` and `onstop` share one env name.
 
 ## Left out on purpose
 

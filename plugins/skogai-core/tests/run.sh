@@ -35,7 +35,7 @@ row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "echo hi\nec
 row PostToolUse $p '{"tool_name": "Bash", "tool_input": {"command": "ls"}, "agent_id": "sub1"}' | "$scripts/append-json.sh"
 row PostToolUseFailure $p "{\"tool_name\": \"Read\", \"tool_input\": {\"file_path\": \"$repo/src/a.txt\"}}" | "$scripts/append-json.sh"
 row PostToolUse $other '{"tool_name": "Bash", "tool_input": {"command": "not this turn"}}' | "$scripts/append-json.sh"
-row Stop $p '{"last_assistant_message": "done"}' | SKOGAI_STAGE_ON_STOP=true "$scripts/events/Stop.sh"
+row Stop $p '{"last_assistant_message": "done"}' | SKOGAI_STAGE_ONSTOP=true "$scripts/events/Stop.sh"
 
 log="$repo/.skogai/logs/skogai-core/log.jsonl"
 check "log is at the git root, one row per event" \

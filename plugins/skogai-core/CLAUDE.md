@@ -1,2 +1,1 @@
 - @FEATURES.md
-- @.skogai/CLAUDE.md

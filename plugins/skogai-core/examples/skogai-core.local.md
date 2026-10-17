@@ -3,7 +3,7 @@
 # you run Claude. Everything here is optional: with no file, skogai-core logs
 # every event and acts as usual. Check it with scripts/validate-settings.sh.
 # With dash's `skogai config` on PATH, the same keys can also come from its
-# layers as `skogai-core.<key>`, or env as SKOGAI_SKOGAI_CORE_<KEY>.
+# layers as `skogai-core.<key>`, or env as SKOGAI_SKOGAICORE_<KEY>.
 
 # false switches the plugin off: no log rows, no journal, no git steps, no
 # status line.

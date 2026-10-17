@@ -3,10 +3,10 @@
 # what ran as a comma-separated list for the log.
 # Usage: git-steps.sh <EVENT> <root>   (EVENT: STOP or USER_PROMPT_SUBMIT)
 # Switches, all off unless true, run in this order (dash's `skogai config`
-# keys, with the env names they map to):
-#   stage.on-<event>   SKOGAI_STAGE_ON_<EVENT>   `git add -A`
-#   commit.on-<event>  SKOGAI_COMMIT_ON_<EVENT>  `wt step commit` (skipped when the tree is clean)
-#   merge.on-<event>   SKOGAI_MERGE_ON_<EVENT>   `wt merge --no-remove`
+# keys, with the env names they map to, <EVENT> without its `_`):
+#   stage.on-<event>   SKOGAI_STAGE_ON<EVENT>    `git add -A`
+#   commit.on-<event>  SKOGAI_COMMIT_ON<EVENT>   `wt step commit` (skipped when the tree is clean)
+#   merge.on-<event>   SKOGAI_MERGE_ON<EVENT>    `wt merge --no-remove`
 # Read with `skogai config list` from the git root, so its base, global and
 # local layers apply. Without a working `skogai` on PATH, the env vars alone.
 set -euo pipefail
@@ -17,7 +17,7 @@ config=$(cd "$root" && skogai config list 2>/dev/null) || config=
 
 # switch <step>: the resolved value of <step>.on-<event>.
 switch() {
-  local var=SKOGAI_${1^^}_ON_$event
+  local var=SKOGAI_${1^^}_ON${event//_/}
   if [[ -n $config ]]; then
     sed -n "s/^$1\.$on=//p" <<<"$config"
   else
