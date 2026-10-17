@@ -91,9 +91,9 @@ Never in config, in any layer. Secrets live in fnox and only reach tasks that de
 ## Changes, in order
 
 1. **Fix `skogai` on `PATH`:** done 2026-10-16. The broken uv `skogai-cli` is uninstalled and `~/.local/bin/skogai` links to `~/skogai/dash-skogai/bin/skogai`.
-2. **dash `bin/skogai`:** add `--file X.md [--scope NAME]` to `get`/`list`/`set`, with the flattening above, and multi-valued keys (`_resolve` keeps only the last value per key today).
+2. **dash `bin/skogai`:** written and tested, not installed: the auto-mode classifier blocks this session from writing `~/skogai/dash-skogai`. The change is `todo/patches/dash-skogai-config-file-layers.patch` (`bin/skogai` and `type/config.md`; `git apply --check` passes in `~/skogai`). It adds `--file` (repeatable) and `--scope` to `get`/`list`/`env`/`files`, plus `set`/`unset --file`, which write `x.local.md`. Lists print one item per line, `~` removes a key, and an unreadable layer exits `2`.
 3. **skogai-core `git-steps.sh`:** done. It reads `skogai config list` from the git root and falls back to the `SKOGAI_*_ON_*` env vars when no working `skogai` is on PATH. The env names match dash's keys, so nothing changes until a config file sets one.
-4. **skogai-core `settings.sh` and `register.ts`:** read `skogai config get --file <root>/.claude/skogai-core.md --scope skogai-core <key>`, keeping the awk reader as the fallback when `skogai` isn't installed. Plugins are shared through the marketplace and must work without dash.
+4. **skogai-core `settings.sh` and `register.ts`:** done. Both read `skogai config list --file <root>/.claude/skogai-core.md --scope skogai-core` and fall back to reading the `.local.md` themselves when `skogai` doesn't know `--file`, which is the case until step 2 is applied. Keys are kebab-case (`log-path`); `_` still reads.
 5. **mise:** move the `SKOGAI_*_ON_*` values into `~/.skogai/config` and source them back through `skogai config env`.
 6. **Delete** `~/marketplace/scripts/parse-frontmatter.sh` and the copies of `validate-settings.sh` / `example.local.md` in `dash-skogai/`, once the dash type checks config.
 

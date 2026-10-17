@@ -11,11 +11,23 @@
 
 SKOGAI_SETTINGS=${SKOGAI_SETTINGS:-$root/.claude/skogai-core.local.md}
 
-# skogai_setting <key>: the key's value from the frontmatter. A list, inline
+# The resolved settings as key=value lines, one per list item. dash's
+# `skogai config` folds its base, global and local layers, then this file and
+# its .local.md, then env (SKOGAI_SKOGAI_CORE_<KEY>). Without a `skogai` that
+# knows --file, only the .local.md is read, by the awk below.
+SKOGAI_RESOLVED=$(cd "$root" 2>/dev/null &&
+  skogai config list --file "${SKOGAI_SETTINGS%.local.md}.md" --scope skogai-core 2>/dev/null) ||
+  SKOGAI_RESOLVED=
+
+# skogai_setting <key>: the key's value, `_` read as `-`. A list, inline
 # (`[a, "b"]`) or as `- item` lines, comes out space-separated.
 skogai_setting() {
+  if [[ -n $SKOGAI_RESOLVED ]]; then
+    sed -n "s/^skogai-core\.${1//_/-}=//p" <<<"$SKOGAI_RESOLVED" | paste -sd' '
+    return
+  fi
   [[ -f $SKOGAI_SETTINGS ]] || return 0
-  awk -v k="$1" '
+  awk -v k="$1" -v k2="${1//_/-}" '
     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
     function unquote(s) { s = trim(s); if (s ~ /^".*"$/ || s ~ /^'\''.*'\''$/) s = substr(s, 2, length(s) - 2); return s }
     function nocomment(s) { sub(/[ \t]+#.*$/, "", s); return s }
@@ -23,8 +35,8 @@ skogai_setting() {
     $0 == "---" { exit }
     inlist && /^[ \t]*- / { sub(/^[ \t]*- /, ""); out = out " " unquote(nocomment($0)); next }
     inlist { exit }
-    index($0, k ":") == 1 {
-      v = trim(nocomment(substr($0, length(k) + 2)))
+    index($0, k ":") == 1 || index($0, k2 ":") == 1 {
+      v = trim(nocomment(substr($0, index($0, ":") + 1)))
       if (v == "") { inlist = 1; next }
       if (v ~ /^\[.*\]$/) {
         n = split(substr(v, 2, length(v) - 2), a, ",")
@@ -32,7 +44,7 @@ skogai_setting() {
       } else out = unquote(v)
       exit
     }
-    END { print trim(out) }
+    END { out = trim(out); if (out == "~" || out == "null") out = ""; print out }
   ' "$SKOGAI_SETTINGS"
 }
 

@@ -8,6 +8,8 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
 SKOGAI_SETTINGS=${1:-}
 . "$(dirname "$0")/settings.sh"
+# Check this file as written, not the folded layers.
+SKOGAI_RESOLVED=
 file=$SKOGAI_SETTINGS
 
 errors=0
@@ -29,10 +31,11 @@ fi
 ((errors == 0)) || exit 1
 
 frontmatter=$(awk 'NR == 1 { next } $0 == "---" { exit } { print }' "$file")
-keys=$(grep -oE '^[A-Za-z_][A-Za-z0-9_]*:' <<<"$frontmatter" | tr -d : || true)
+# `_` reads as `-`, as in `skogai config`.
+keys=$(grep -oE '^[A-Za-z_][A-Za-z0-9_-]*:' <<<"$frontmatter" | tr -d : | tr _ - || true)
 for key in $keys; do
   case $key in
-    enabled | events | log_path | status_line) ;;
+    enabled | events | log-path | status-line) ;;
     *) warn "unknown key '$key' is ignored" ;;
   esac
 done

@@ -50,10 +50,12 @@ plugins/skogai-core/scripts/validate-settings.sh
 |---|---|---|
 | `enabled` | `true` | `false` switches everything off: log, journal, git steps, status line |
 | `events` | all | Hook events to log, as a list; globs such as `"Post*"` work. The journal needs `UserPromptSubmit` and `PostToolUse*` |
-| `log_path` | `.skogai/logs/skogai-core/log.jsonl` | Where the log goes, relative to the git root |
-| `status_line` | `true` | `false` hides `hook: <event>` |
+| `log-path` | `.skogai/logs/skogai-core/log.jsonl` | Where the log goes, relative to the git root |
+| `status-line` | `true` | `false` hides `hook: <event>` |
 
-Scripts read the file on every event and so does the status line, so edits apply without a restart. The git-step switches stay env vars (see [diff as context](DIFF-AS-CONTEXT.md)).
+Keys may also be written with `_` (`log_path`). Scripts read the file on every event and so does the status line, so edits apply without a restart.
+
+With dash's `skogai config` on PATH (one that knows `--file`), the file is one layer of it: the same keys can come from `~/.skogai/config` or a repo's `.skogai/config` as `skogai-core.<key>`, or from env as `SKOGAI_SKOGAI_CORE_<KEY>`. `skogai config list --show-origin --file .claude/skogai-core.md --scope skogai-core` shows where each value came from. Without it, only the file is read. The git-step switches stay env vars (see [diff as handover](.skogai/features/diff-as-handover.md)).
 
 ## Files
 

@@ -86,4 +86,18 @@ printf -- '---\nenabled: maybe\nlog_path: /abs\n---\n' >"$repo/.claude/skogai-co
 check "settings: validator rejects bad values" 1 \
   "$(cd "$repo" && "$scripts/validate-settings.sh" >/dev/null; echo $?)"
 
+# With a `skogai` that knows --file, a global git-config layer reaches the
+# plugin too. Skipped without one.
+if (cd "$repo" && skogai config list --file x.md >/dev/null 2>&1); then
+  rm "$repo/.claude/skogai-core.local.md"
+  global=$(mktemp)
+  printf '[skogai-core]\n\tlog-path = global.jsonl\n' >"$global"
+  row PreToolUse $p | SKOGAI_GLOBAL_CONFIG=$global "$scripts/append-json.sh"
+  rm "$global"
+  check "settings: skogai config's global layer sets log-path" PreToolUse \
+    "$(jq -r .event "$repo/global.jsonl" 2>/dev/null)"
+else
+  echo "skip settings through skogai config (no skogai with --file on PATH)"
+fi
+
 exit $fail
