@@ -1712,3 +1712,150 @@ Which one do you want to start with?
 - Bash: `cd ~/.local/src/marketplace/plugins/skogai-core`
 - Bash: `cd ~/.local/src/marketplace && rtk git add -A plugins/skogai-core && rtk git commit -q -m "skogai-core: env names follow…`
 
+## 2026-10-17 08:40 · turn 90c581fa
+
+**User**
+
+> /worktrunk:wt-switch-create pr:1
+
+**Assistant**
+
+I couldn't create a worktree for PR #1. The PR is closed and its branch (`ccr-b54a7506-8d3g4g`) has been deleted from origin, so `wt switch pr:1` had nothing to fetch.
+
+GitHub still keeps the PR's commits under `refs/pull/1/head`. If you want them, I can run `git fetch origin pull/1/head:pr-1` and put a worktree on the new local branch `pr-1`. Should I?
+
+**Actions**
+
+- Bash: `wt switch pr:1 --no-cd --format=json` (failed)
+
+## 2026-10-17 08:47 · turn f6c5a8bd
+
+**User**
+
+
+
+**Assistant**
+
+I haven't started on the workorder yet, because git state changed under me. It isn't on master; I found it as `.skogai/workorders/0001-skogai-events.md` in commit `c74b774`, which is only on `origin/ccr-8ff7c037-5vfd1h`.
+
+- **Master:** the old 43-line `plugins/skogai-core/PLAN.md` is back.
+- **Stashes:** two new ones, `stash@{0}` (journal) and `stash@{1}` "skogai-events workorder".
+- **History:** master was rebased, so my commit is now `a18e013`, not `f3c04c8`.
+- **Worktree:** `.skogai/worktrees/skogai-events` exists.
+
+I left all of that alone.
+
+**Correction:** my earlier "fix" to the CONFIG.md link was wrong. The file lives in `.skogai/workorders/`, so `../../plugins/skogai-core/CONFIG.md` was the right path. Only the test count needs changing (8 → 9).
+
+**Your answers, as I'll write them into the workorder:**
+- **Owners:** the parent owns the folder, and each instance owns its own files.
+- **Defaults:** opt-in. Every event is off until a repo enables it, and a missing event file means the event is off.
+- **Pinned event files:** the plugin keeps them in `type/event/`, mirroring dash.
+- **Log path:** paths under `.skogai/logs` and `.skogai/tmp` are temporary. On the rename, the old log is dropped rather than carried over, and the new path loses the plugin name. I'd use `.skogai/logs/event.jsonl`.
+
+I saved the opt-in and temporary-paths rules as a memory (`temporary-paths`).
+
+Next I'd cherry-pick `c74b774` onto master and add the decisions and the test count to the workorder, then start on A1 and A2 (`type/event.md` and the row schema) in `~/skogai/dash-skogai`. Since you seem to be moving branches around right now, should I go ahead, or wait until you've finished?
+
+**Actions**
+
+- Bash: `cd ~/.local/src/marketplace; ls docs/hooks.md; grep -c "^ok\|^FAIL" <(bash plugins/skogai-core/tests/run.sh 2>&1); grep …`
+- Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; sed -i 's|(see \[CONFIG.md\](../../plugins/skogai-core/CONFIG.md), step…`
+- AskUserQuestion
+- Bash: `rtk read ~/skogai/.skogai/memory/offer-dont-install.md; sed -n 30,45p PLAN.md; sed -n 100,125p PLAN.md; rtk read .gitign…`
+- Bash: `rtk read PLAN.md --head-lines 5; rtk wc -l PLAN.md; rtk git -C ~/.local/src/marketplace status --short; rtk git -C ~/.lo…`
+- Bash: `cd ~/.local/src/marketplace/.skogai/worktrees/skogai-events && rtk git status --short && rtk read plugins/skogai-core/PL…` (failed)
+- Bash: `cd ~/.local/src/marketplace; rtk git stash list; git reflog -8; rtk git log --all --oneline -8 -- plugins/skogai-core/PL…`
+- Bash: `cd ~/.local/src/marketplace; git branch -a --contains c74b774; git show --stat c74b774 | head -12; git stash show stash@…`
+- Bash: `cat > ~/skogai/.skogai/memory/temporary-paths.md <<'EOF'`
+
+## 2026-10-17 08:58 · turn 49fd8b70
+
+**User**
+
+
+
+**Assistant**
+
+The worktree is gone, and the PLAN.md rewrite is back in master's working tree, where it started.
+
+- **Why it got there:** `/usr/bin/git` gets past the rtk rewrite, so `git stash apply` worked. But `skogai-events` is no longer in `git worktree list`, and the branch doesn't exist anymore. Git walked up from the leftover directory and applied the stash to master.
+- **Leftover directory:** `.skogai/worktrees/skogai-events/` holds nothing but a `.skogai/` subdirectory, probably written by the journal hook.
+- **New stash I didn't make:** `stash@{0}` is "WIP on skogai-events". Whatever removed the worktree seems to have stashed something on the way out. I haven't touched it.
+- **My stash is still there:** `stash@{1}` ("skogai-events workorder") wasn't dropped, because I used apply rather than pop.
+- **master's working tree now:** `journal.md`, `TODO.md` and `plugins/skogai-core/PLAN.md` are modified. I didn't touch `TODO.md`.
+
+I've stopped here. Should I drop both stashes and remove the leftover directory, then make the worktree again with `wt switch --create`? A worktree made that way stays when the session ends.
+
+**Actions**
+
+- Bash: `rtk bypass git stash list --format='%H %gd %gs'` (failed)
+- Bash: `/usr/bin/git stash list --format='%H %gd %gs'`
+- Bash: `/usr/bin/git stash apply 1370ad2996e060e4c1bd9354c374a152c624acf3 && /usr/bin/git status --short`
+- Bash: `rtk ls -la; /usr/bin/git worktree list; /usr/bin/git branch --list 'skogai-events*'`
+
+## 2026-10-17 09:03 · turn 5192e60f
+
+**User**
+
+> yeah that all went into chaos. feel free to fix back the git state as you see fit
+
+**Assistant**
+
+Master is back in order and pushed. It now ends with the workorder commit and your decisions on top:
+
+```
+da2263f Workorder 0001: record owners, opt-in, pin paths, throwaway logs
+dc2ac12 Workorder 0001: skogai-events; replaces skogai-core PLAN.md   (cherry-picked c74b774)
+a18e013 skogai-core: env names follow dash's rule (- dropped), docs catch up
+```
+
+- **Workorder:** it now lives at `.skogai/workorders/0001-skogai-events.md`, and `plugins/skogai-core/PLAN.md` is gone. My earlier change to its CONFIG.md link was discarded, since the original path is right from that folder.
+- **TODO.md:** someone had appended the old plan to it; I removed that copy, since the workorder replaces it.
+- **Decisions recorded:** parent owns the folder, events are opt-in (a missing file means off), pinned files sit at `type/event/` like dash, and the log moves to `.skogai/logs/event.jsonl` with the old one dropped. The test count is fixed (9). Two questions are still open: where a repo records the dash commit it pins (`dash.ref`), and the workorder type itself.
+- **Worktree:** the broken `skogai-events` worktree is pruned and its folder removed. It only held one log file.
+- **Journal:** `.skogai/journal.md` still has uncommitted changes. The Stop hook writes it, so I left it alone.
+
+The auto-mode classifier blocked the deletions, so these are left for you. Everything they remove is either already on master or a superseded copy:
+
+```
+! git branch -D merge-or-not && git push origin --delete merge-or-not skogai-events && git stash clear
+```
+
+PR #4 (`ccr-8ff7c037-5vfd1h`) is still open, though its content is now on master; you can close it with `gh pr close 4 --delete-branch`.
+
+Next is A1 and A2 in `~/skogai/dash-skogai`: `type/event.md` and the row schema.
+
+**Actions**
+
+- Bash: `cd ~/.local/src/marketplace; git status --short; git branch -vv; git log --oneline --graph -12 --all | head -40; git sta…`
+- Bash: `cd ~/.local/src/marketplace; rtk ls -la .skogai/worktrees/skogai-events | head; rtk read .skogai/worktrees/skogai-events…`
+- Bash: `cd ~/.local/src/marketplace; rtk find .skogai/worktrees/skogai-events -type f | head; rtk read .git/worktrees/skogai-eve…`
+- Bash: `cd ~/.local/src/marketplace; rtk find .skogai/worktrees -type f; rtk git worktree list; rtk git worktree prune -v`
+- Bash: `cd ~/.local/src/marketplace; rtk bypass find .skogai/worktrees -type f -exec ls -la {} \;`
+- Bash: `cd ~/.local/src/marketplace; rm -rf .skogai/worktrees`
+- Bash: `cd ~/.local/src/marketplace; grep -n "" .skogai/workorders/0001-skogai-events.md | sed -n '25,40p;55,75p;84,125p'`
+- Bash: `cd ~/.local/src/marketplace; python3 - <<'EOF'`
+- Bash: `cd ~/.local/src/marketplace; rtk git add .skogai/workorders/0001-skogai-events.md && rtk git commit -q -m "Workorder 000…`
+
+## 2026-10-17 11:54 · turn 2f408fe9
+
+**User**
+
+> Generate up to 3 alternative conventional commit messages (feat/fix/docs/refactor/chore/test/perf/build/ci/style) for the following git diff. Output ONLY the commit messages, one per line, at most 3 lines. Each message must be a single line in English with a subject of at most 72 characters. No numbering, no bullets, no markdown, no quotes, no explanations.
+> STAGED DIFF OVERVIEW
+> total: 1 files, +126 -0
+> M +126 -0 .skogai/journal.md
+>
+> COVERAGE: sampled 0/1 files, 0/1 hunks; input is a sample of the staged diff
+
+**Assistant**
+
+docs(journal): add 2026-10-17 session entries
+chore(journal): record worktree and workorder session notes
+chore: update session journal
+
+**Actions**
+
+- Bash: `rtk git -C /home/skogix/.local/src/marketplace diff --cached --stat && rtk git -C /home/skogix/.local/src/marketplace di…`
+
