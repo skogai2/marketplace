@@ -38,6 +38,10 @@ sources:
 2. **Each event is a `type: event` instance with its own JSON schema.** Every event is already a JSON row appended to a jsonl, an immutable linked list. The schema describes that row's `input`.
 3. **Rename to skogai-events.** `core` is a bigger concept; `events` is what the plugin literally does.
 4. **argc + mise** for the tooling.
+5. **Owners: the parent owns the folder.** `type` owns `type/event/`; each event instance owns its own `type/event/<name>.md` and `<name>.schema.json`.
+6. **Opt-in.** Every event ships off. A repo turns one on with `enabled: true`; a missing event file is off.
+7. **Pinned files mirror dash.** The plugin keeps its copy at `type/event/`, the same paths as dash, so dash diffs apply as they are.
+8. **Logs and tmp are throwaway.** `.skogai/logs/` and `.skogai/tmp/` are never kept across a change: the rename drops the old log, and the new one is `.skogai/logs/event.jsonl`, without a plugin name.
 
 ## What exists now
 
@@ -58,7 +62,7 @@ sources:
 - **The row:** `append-json.sh` appends one row per event to `.skogai/logs/skogai-core/log.jsonl`, under `flock`: `{ts, event, action?, input}`. Other features depend on these `input` fields: `prompt_id`, `agent_id`, `prompt`, `tool_name`, `tool_input`, `last_assistant_message` (see `.skogai/features/event-log.md`).
 - **Settings:** `.claude/skogai-core.md` / `.local.md` with keys `enabled`, `events`, `log-path`, `status-line`, scoped as `skogai-core.*`. The git steps use unscoped keys (`stage.on-stop`, ...). Reading them goes through `settings.sh`, `register.ts` and `validate-settings.sh`.
 - **Status line:** `hooks/register.ts` shows the last row's event.
-- **Tests:** `tests/run.sh` runs 8 tests, all passing.
+- **Tests:** `tests/run.sh` runs 9 tests, all passing.
 
 ## Work
 
@@ -70,7 +74,7 @@ sources:
   - **writes**: the event log.
   - **watches**: the default list.
   - **entrypoint**: `scripts/event/<name>.sh` gets the hook's JSON on stdin. It may answer the way any command hook does: exit 0, exit 2, or JSON on stdout. It appends exactly one row.
-  - **defaults**: the log path, which events are on, and the starting watch list. Their keys go in dash's base `config`.
+  - **defaults**: the log path (`.skogai/logs/event.jsonl`) and the starting watch list. No event is on by default (decision 6). Their keys go in dash's base `config`.
 - [ ] **A2. The row schema**: `type/event.schema.json` for `{ts, event, action?, input}`.
 - [ ] **A3. One instance per hook event**: `type/event/<Name>.md` and `<Name>.schema.json` for each of the 13. Write each schema's `input` from the hooks reference (`docs/hooks.md` in marketplace). Mark the fields other events depend on as required, such as `prompt_id` and `agent_id` for `Stop`.
 - [ ] **A4. `trigger.when`**: names an `event` instance. Paths stay with `watches`.
@@ -83,7 +87,7 @@ sources:
   - `.claude-plugin/marketplace-header.json` gets `"renames": {"skogai-core": "skogai-events"}`; then rerun `scripts/generate-marketplace-json.sh`.
   - The config scope `skogai-core.*` becomes `skogai-events.*`, so the env prefix `SKOGAI_SKOGAICORE_*` becomes `SKOGAI_SKOGAIEVENTS_*`.
   - The settings file becomes `.claude/skogai-events.md`.
-  - The log path is a decision (see questions).
+  - The log moves to `.skogai/logs/event.jsonl`; the old `.skogai/logs/skogai-core/` is deleted (decision 8).
 - [ ] **B2. Pin:** copy dash's `type/event/` into the plugin at a dash commit, and record that commit (see questions).
 - [ ] **B3. Patches:** local changes live in append-only `*.diff` files. Applying them in order to the pinned copy gives the working files. A check fails if the working files differ from "pin + patches".
 - [ ] **B4. Generate `hooks/hooks.json`** from the event instances that are on, with a script next to `generate-marketplace-json.sh`. `register.ts` stays in `modules`.
@@ -92,7 +96,7 @@ sources:
   - The plugin ships a `mise.toml` with argc, jq and yq.
   - Hooks run through `mise -C "${CLAUDE_PLUGIN_ROOT}" x -- ...`.
   - A hook must not block a prompt when mise or a tool is missing: it exits 0 and writes to stderr.
-- [ ] **B6. Settings:** the event-file frontmatter replaces `events` (`enabled:` per event). It is read as one more `--file` layer of `skogai config`. Remove whatever has no reader left; keep the fallback for a machine without `skogai`, per CONFIG.md step 4.
+- [ ] **B6. Settings:** the event-file frontmatter replaces `events` (`enabled: true` per event, off otherwise). It is read as one more `--file` layer of `skogai config`. Remove whatever has no reader left; keep the fallback for a machine without `skogai`, per CONFIG.md step 4.
 - [ ] **B7. Verify:**
   - `tests/run.sh` updated and green;
   - `claude plugin validate plugins/skogai-events`;
@@ -104,12 +108,8 @@ sources:
 
 Each one says which step it blocks.
 
-1. **Owners (blocks A3):** `type` owns `type/<name>/`, and `event` would own `type/event/<name>.md`. dash's TODO proposes that the parent owns the folder and its instances own their files. Settle that first.
-2. **Dash ref (blocks B2):** where does a dot record the commit it pins? dash's TODO suggests `dash.ref` in the local config.
-3. **Log path on rename (blocks B1):** move to `.skogai/logs/skogai-events/log.jsonl`, or keep the old path so existing logs keep growing?
-4. **Defaults (shapes A1):** are a missing event file and `enabled: false` the same? And are the defaults "all 13 on" or only the three that act?
-5. **Where the plugin's event files live (shapes B2):** `plugins/skogai-events/.skogai/event/`, or `type/event/` mirroring dash?
-6. **This file's type:** no workorder type exists yet. dash has a stub `task` and a TODO to rename it to `workorder`. This file uses `type: workorder` and `status: open|done|blocked`, per the glossary.
+1. **Dash ref (blocks B2):** where does a dot record the commit it pins? dash's TODO suggests `dash.ref` in the local config.
+2. **This file's type:** no workorder type exists yet. dash has a stub `task` and a TODO to rename it to `workorder`. This file uses `type: workorder` and `status: open|done|blocked`, per the glossary.
 
 ## Out of scope
 
@@ -122,4 +122,4 @@ Each one says which step it blocks.
 - dash `check` is clean, with `event` and 13 instances.
 - skogai-events loads and passes validation, and its event files equal "dash at the pinned commit + patches".
 - `hooks.json` is generated.
-- The 3 acting events behave as they did in skogai-core 0.7.0.
+- With those 3 enabled, the acting events behave as they did in skogai-core 0.7.0.
