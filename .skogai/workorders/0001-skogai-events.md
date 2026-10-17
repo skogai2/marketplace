@@ -76,7 +76,7 @@ sources:
   - **entrypoint**: `scripts/event/<name>.sh` gets the hook's JSON on stdin. It may answer the way any command hook does: exit 0, exit 2, or JSON on stdout. It appends exactly one row.
   - **defaults**: the log path (`.skogai/logs/event.jsonl`) and the starting watch list. No event is on by default (decision 6). Their keys go in dash's base `config`.
 - [x] **A2. The row schema**: `type/event.schema.json` validates event instances; the row `{ts, event, action?, input}` is its `$defs/row`, which each `<name>.schema.json` narrows.
-- [ ] **A3. One instance per hook event**: `type/event/<Name>.md` and `<Name>.schema.json` for each of the 13. Write each schema's `input` from the hooks reference (`docs/hooks.md` in marketplace). Mark the fields other events depend on as required, such as `prompt_id` and `agent_id` for `Stop`.
+- [x] **A3. One instance per hook event**: `type/event/<name>.md` and `<name>.schema.json` for each of the 13, lowercase (`stop.md`, `title: Stop`). Write each schema's `input` from the hooks reference (`docs/hooks.md` in marketplace). Mark the fields other events depend on as required, such as `prompt_id` and `agent_id` for `Stop`.
 - [ ] **A4. `trigger.when`**: names an `event` instance. Paths stay with `watches`.
 - [ ] **A5.** List `event` in `type/index.md`; `mise run dash:check` reports `errors=0`.
 
