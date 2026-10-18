@@ -15,12 +15,39 @@ EXTERNAL_REPOS_JSON="$REPO_ROOT/.claude-plugin/external-repos.json"
 HEADER_JSON="$REPO_ROOT/.claude-plugin/marketplace-header.json"
 TEMP_FILE=$(mktemp)
 CLONE_DIR=$(mktemp -d)
-trap 'rm -rf "$CLONE_DIR"' EXIT
+trap 'rm -rf "$CLONE_DIR" "$TEMP_FILE"' EXIT
+
+# --check: regenerate in memory and fail if marketplace.json differs from what
+# this script would write (ignoring the version bump). Never writes anything.
+CHECK=false
+[ "${1:-}" = "--check" ] && CHECK=true
+
+die() {
+    echo -e "${RED}Error: $*${NC}" >&2
+    exit 1
+}
+
+# jq silently keeps the last of duplicate keys, so a botched hand edit can
+# parse fine and still mean something else. Reject them.
+python3 - "$MARKETPLACE_JSON" "$HEADER_JSON" "$EXTERNAL_REPOS_JSON" <<'PY' || exit 1
+import json, sys
+def no_dupes(pairs):
+    keys = [k for k, _ in pairs]
+    dupes = sorted({k for k in keys if keys.count(k) > 1})
+    if dupes:
+        raise ValueError("duplicate key(s): " + ", ".join(dupes))
+    return dict(pairs)
+for path in sys.argv[1:]:
+    try:
+        with open(path) as f:
+            json.load(f, object_pairs_hook=no_dupes)
+    except FileNotFoundError:
+        pass
+    except ValueError as e:
+        sys.exit(f"\033[0;31mError: {path}: {e}\033[0m")
+PY
 
 echo -e "${YELLOW}Generating marketplace.json from discovered plugins...${NC}"
-
-# Calculate SHA256 of original file
-ORIGINAL_SHA=$(shasum -a 256 "$MARKETPLACE_JSON" | awk '{print $1}')
 
 # Marketplace metadata comes from marketplace-header.json; only "version" is
 # carried over from the current marketplace.json (it's bumped below).
@@ -51,6 +78,11 @@ build_plugin_entry() {
 
 PLUGIN_FILES=$(find "$REPO_ROOT/plugins" -mindepth 3 -maxdepth 3 -path "*/.claude-plugin/plugin.json" | sort)
 
+for dir in "$REPO_ROOT"/plugins/*/; do
+    [ -f "$dir.claude-plugin/plugin.json" ] \
+        || echo -e "${YELLOW}Warning: plugins/$(basename "$dir") has no .claude-plugin/plugin.json; skipped (list external plugins in external-repos.json)${NC}" >&2
+done
+
 if [ -z "$PLUGIN_FILES" ]; then
     echo -e "${RED}No plugin.json files found!${NC}"
     exit 1
@@ -80,13 +112,10 @@ done <<< "$PLUGIN_FILES"
 #
 # external-repos.json is an array of plugin source objects, exactly as they
 # appear in marketplace.json (github, url or git-subdir). Each run fetches the
-# plugin's .claude-plugin/plugin.json for name and description. Any failure
-# aborts the run before marketplace.json is touched.
-
-die() {
-    echo -e "${RED}Error: $*${NC}" >&2
-    exit 1
-}
+# plugin's .claude-plugin/plugin.json for name and description. plugin.json is
+# optional, so a repo without one falls back to the entry in its own
+# .claude-plugin/marketplace.json whose source is "./". Any failure aborts the
+# run before marketplace.json is touched.
 
 if [ -f "$EXTERNAL_REPOS_JSON" ]; then
     EXTERNAL_COUNT=$(jq 'length' "$EXTERNAL_REPOS_JSON")
@@ -129,18 +158,31 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
         COMMIT="${SHA:-$REF}"
         echo "Fetching $MANIFEST_PATH from $URL${COMMIT:+ @ $COMMIT}"
 
-        PLUGIN_DATA=""
-        if [ -n "$GH_REPO" ] && command -v gh >/dev/null; then
-            PLUGIN_DATA=$(gh api -H "Accept: application/vnd.github.raw" \
-                "repos/$GH_REPO/contents/$MANIFEST_PATH${COMMIT:+?ref=$COMMIT}" 2>/dev/null) || PLUGIN_DATA=""
-        fi
-        if [ -z "$PLUGIN_DATA" ]; then
-            # Blobless sparse clone: only the manifest is downloaded.
-            DEST="$CLONE_DIR/$i"
-            git clone --quiet --no-checkout --filter=blob:none ${REF:+--branch "$REF"} "$URL" "$DEST" \
+        OWN_MARKETPLACE_PATH="${SUBDIR:+${SUBDIR#./}/}.claude-plugin/marketplace.json"
+        DEST="$CLONE_DIR/$i"
+
+        # Prints one file from the external repo, or nothing if it's missing.
+        fetch_file() {
+            local path="$1"
+            if [ -n "$GH_REPO" ] && command -v gh >/dev/null; then
+                local out
+                out=$(gh api -H "Accept: application/vnd.github.raw" \
+                    "repos/$GH_REPO/contents/$path${COMMIT:+?ref=$COMMIT}" 2>/dev/null) \
+                    && { echo "$out"; return; }
+            fi
+            # Blobless clone: only the files read here are downloaded.
+            [ -d "$DEST" ] || git clone --quiet --no-checkout --filter=blob:none ${REF:+--branch "$REF"} "$URL" "$DEST" \
                 || die "could not clone $URL"
-            PLUGIN_DATA=$(git -C "$DEST" show "${SHA:-HEAD}:$MANIFEST_PATH" 2>/dev/null) \
-                || die "$URL has no $MANIFEST_PATH${COMMIT:+ at $COMMIT}"
+            git -C "$DEST" show "${SHA:-HEAD}:$path" 2>/dev/null || true
+        }
+
+        PLUGIN_DATA=$(fetch_file "$MANIFEST_PATH")
+        if [ -z "$PLUGIN_DATA" ]; then
+            PLUGIN_DATA=$(fetch_file "$OWN_MARKETPLACE_PATH" \
+                | jq -c '[.plugins[]? | select(.source == "./" or .source == ".")] | if length == 1 then .[0] else empty end' 2>/dev/null)
+            [ -n "$PLUGIN_DATA" ] \
+                || die "$URL has neither $MANIFEST_PATH nor a single \"./\" entry in $OWN_MARKETPLACE_PATH${COMMIT:+ at $COMMIT}"
+            echo "  (no plugin.json; using the entry in $OWN_MARKETPLACE_PATH)"
         fi
 
         echo "$PLUGIN_DATA" | jq -e '.name | type == "string" and length > 0' >/dev/null 2>&1 \
@@ -152,44 +194,39 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
     done
 fi
 
+# Two plugins with one name would shadow each other.
+DUPES=$(echo "$PLUGINS_JSON" | jq -r 'group_by(.name)[] | select(length > 1) | .[0].name')
+[ -z "$DUPES" ] || die "duplicate plugin name(s): $DUPES"
+
 # Sort plugins alphabetically by name
 PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq 'sort_by(.name)')
 
+CURRENT_VERSION=$(echo "$MARKETPLACE_HEADER" | jq -r '.version // "1.0.0"')
+
 # Combine marketplace metadata with plugins array
-FINAL_JSON=$(echo "$MARKETPLACE_HEADER" | jq --argjson plugins "$PLUGINS_JSON" '. + {plugins: $plugins}')
+echo "$MARKETPLACE_HEADER" | jq --argjson plugins "$PLUGINS_JSON" '. + {plugins: $plugins}' > "$TEMP_FILE"
 
-# Write to marketplace.json with proper formatting
-echo "$FINAL_JSON" | jq '.' > "$TEMP_FILE"
+if $CHECK; then
+    if cmp -s "$TEMP_FILE" "$MARKETPLACE_JSON"; then
+        echo -e "${GREEN}$MARKETPLACE_JSON is up to date${NC}"
+        exit 0
+    fi
+    echo -e "${RED}$MARKETPLACE_JSON is out of date or was hand-edited. Run scripts/generate-marketplace-json.sh.${NC}" >&2
+    diff -u "$MARKETPLACE_JSON" "$TEMP_FILE" >&2 || true
+    exit 1
+fi
 
-# Calculate SHA256 of new file
-NEW_SHA=$(shasum -a 256 "$TEMP_FILE" | awk '{print $1}')
-
-# Check if content changed
-if [ "$ORIGINAL_SHA" != "$NEW_SHA" ]; then
+if ! cmp -s "$TEMP_FILE" "$MARKETPLACE_JSON"; then
     echo -e "${YELLOW}Content changed, incrementing patch version...${NC}"
-
-    # Extract current version
-    CURRENT_VERSION=$(echo "$MARKETPLACE_HEADER" | jq -r '.version // "1.0.0"')
 
     # Parse version components (major.minor.patch)
     IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-
-    # Increment patch version
-    NEW_PATCH=$((PATCH + 1))
-    NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+    NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
 
     echo -e "${GREEN}Version: $CURRENT_VERSION -> $NEW_VERSION${NC}"
 
-    # Update the marketplace header with new version
-    MARKETPLACE_HEADER=$(echo "$MARKETPLACE_HEADER" | jq --arg version "$NEW_VERSION" '.version = $version')
-
-    # Regenerate with new version
-    FINAL_JSON=$(echo "$MARKETPLACE_HEADER" | jq --argjson plugins "$PLUGINS_JSON" '. + {plugins: $plugins}')
-    echo "$FINAL_JSON" | jq '.' > "$TEMP_FILE"
+    jq --arg version "$NEW_VERSION" '.version = $version' "$TEMP_FILE" > "$MARKETPLACE_JSON"
 fi
-
-# Replace the original file
-mv "$TEMP_FILE" "$MARKETPLACE_JSON"
 
 echo -e "${GREEN}Successfully updated $MARKETPLACE_JSON${NC}"
 echo -e "${GREEN}Total plugins: $(echo "$PLUGINS_JSON" | jq 'length')${NC}"

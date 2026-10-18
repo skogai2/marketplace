@@ -5,11 +5,8 @@
 Manual steps from CLAUDE.md that could be enforced instead of remembered.
 
 - [ ] **`docs/` is read-only** — `permissions.deny` entries `Edit(docs/**)` and `Write(docs/**)` in `.claude/settings.json`.
-- [ ] **Marketplace entry consistency** — a small `jq` script checking that every `plugins[]` entry:
-  - has only `name`, `source`, `description` (no `version`)
-  - has `name` == basename of `source`, kebab-case
-  - resolves to an existing directory under `pluginRoot` with a `.claude-plugin/plugin.json`
-  - is in alphabetical order
+- [x] **Marketplace entry consistency** — `scripts/generate-marketplace-json.sh --check` fails when `marketplace.json` differs from what the generator writes; run from the pre-commit hook and the `marketplace` workflow.
+- [ ] **Block hand edits** — `permissions.deny` entries `Edit(.claude-plugin/marketplace.json)` and `Write(.claude-plugin/marketplace.json)` in `.claude/settings.json`.
 - [ ] **Plugin validation** — run `claude plugin validate plugins/<name>` for each changed plugin. Run it, together with the consistency script above, from a git pre-commit hook (tool hooks can't target `git commit` specifically).
 - [ ] **`docs/` freshness** — the sync scripts were removed. Restore a sync script, and optionally add a SessionStart warning when `docs/synced-at.txt` is older than N days.
 
