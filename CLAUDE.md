@@ -6,8 +6,8 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build or test suite. `
 
 ## Layout
 
-- `metadata.pluginRoot` is `./plugins/`, so each plugin `source` is a bare name resolved under `plugins/` (`"skogai-core"` → `plugins/skogai-core`). `pluginRoot` is ignored for sources starting with `./` — those resolve from the repo root (see `docs/plugins/marketplace-reference.md`, "Bare names under pluginRoot"). All local plugins live under `plugins/`; external ones (no submodules) are listed in `.claude-plugin/external-repos.json`. An external repo without `plugin.json` gets its name and description from the `"./"` entry in its own `.claude-plugin/marketplace.json`.
-- Marketplace entries carry only `name`, `source`, `description`; `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
+- Local plugins live under `plugins/` and are listed with a `./plugins/<name>` source. No `metadata.pluginRoot` and no bare names: claude.ai organization sync rejects them. External plugins (no submodules) are listed in `.claude-plugin/external-repos.json`. An external repo without `plugin.json` gets its name and description from the `"./"` entry in its own `.claude-plugin/marketplace.json`, plus `"strict": false`, which organization sync requires for an inline manifest.
+- Marketplace entries carry only `name`, `source`, `description` (and `strict` in that one case); `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
 - `docs/` is a synced snapshot of the Claude Code docs (date in `docs/synced-at.txt`). Treat it as the read-only reference for plugin/hook/marketplace APIs; never edit it.
 - `todo/` holds reference material to review and, where useful, merge into or add as marketplace plugins. `todo/marketplace-repo-conventions.md` documents this repo's conventions.
 

@@ -51,8 +51,8 @@ echo -e "${YELLOW}Generating marketplace.json from discovered plugins...${NC}"
 
 # Marketplace metadata comes from marketplace-header.json; only "version" is
 # carried over from the current marketplace.json (it's bumped below).
-jq -e '.name and .owner.name and .metadata.pluginRoot' "$HEADER_JSON" >/dev/null 2>&1 || {
-    echo -e "${RED}Error: $HEADER_JSON missing or lacks name, owner.name or metadata.pluginRoot${NC}" >&2
+jq -e '.name and .owner.name' "$HEADER_JSON" >/dev/null 2>&1 || {
+    echo -e "${RED}Error: $HEADER_JSON missing or lacks name or owner.name${NC}" >&2
     exit 1
 }
 MARKETPLACE_HEADER=$(jq -n --slurpfile h "$HEADER_JSON" --slurpfile m "$MARKETPLACE_JSON" \
@@ -98,11 +98,12 @@ while IFS= read -r plugin_file; do
     echo "Processing: $plugin_file"
 
     PLUGIN_DIR=$(dirname "$(dirname "$plugin_file")")
-    # Bare name: resolved under metadata.pluginRoot (./plugins/).
+    # Written out as ./plugins/<dir>: claude.ai organization sync rejects bare
+    # names under metadata.pluginRoot.
     DIR_NAME=$(basename "$PLUGIN_DIR")
 
     PLUGIN_DATA=$(cat "$plugin_file")
-    ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$(jq -n --arg s "$DIR_NAME" '$s')" "$DIR_NAME") || continue
+    ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$(jq -n --arg s "./plugins/$DIR_NAME" '$s')" "$DIR_NAME") || continue
 
     PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$ENTRY" '. + [$entry]')
     echo -e "${GREEN}  Added: $(echo "$ENTRY" | jq -r '.name')${NC}"
@@ -114,8 +115,9 @@ done <<< "$PLUGIN_FILES"
 # appear in marketplace.json (github, url or git-subdir). Each run fetches the
 # plugin's .claude-plugin/plugin.json for name and description. plugin.json is
 # optional, so a repo without one falls back to the entry in its own
-# .claude-plugin/marketplace.json whose source is "./". Any failure aborts the
-# run before marketplace.json is touched.
+# .claude-plugin/marketplace.json whose source is "./", and gets "strict":
+# false so the entry is its manifest (claude.ai organization sync requires
+# that). Any failure aborts the run before marketplace.json is touched.
 
 if [ -f "$EXTERNAL_REPOS_JSON" ]; then
     EXTERNAL_COUNT=$(jq 'length' "$EXTERNAL_REPOS_JSON")
@@ -177,7 +179,9 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
         }
 
         PLUGIN_DATA=$(fetch_file "$MANIFEST_PATH")
+        INLINE_MANIFEST=false
         if [ -z "$PLUGIN_DATA" ]; then
+            INLINE_MANIFEST=true
             PLUGIN_DATA=$(fetch_file "$OWN_MARKETPLACE_PATH" \
                 | jq -c '[.plugins[]? | select(.source == "./" or .source == ".")] | if length == 1 then .[0] else empty end' 2>/dev/null)
             [ -n "$PLUGIN_DATA" ] \
@@ -189,6 +193,9 @@ if [ -f "$EXTERNAL_REPOS_JSON" ]; then
             || die "$URL: $MANIFEST_PATH is not valid JSON or has no name"
 
         ENTRY=$(build_plugin_entry "$PLUGIN_DATA" "$SOURCE" "")
+        if $INLINE_MANIFEST; then
+            ENTRY=$(echo "$ENTRY" | jq '. + {strict: false}')
+        fi
         PLUGINS_JSON=$(echo "$PLUGINS_JSON" | jq --argjson entry "$ENTRY" '. + [$entry]')
         echo -e "${GREEN}  Added (external): $(echo "$ENTRY" | jq -r '.name')${NC}"
     done

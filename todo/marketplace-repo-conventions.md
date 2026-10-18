@@ -27,9 +27,10 @@ bash scripts/generate-marketplace-json.sh
 It builds the file from three inputs:
 
 - `.claude-plugin/marketplace-header.json`: top-level fields (`name`, `owner`,
-  `metadata.pluginRoot`, `renames`, ...). `version` is bumped automatically.
-- `plugins/*/.claude-plugin/plugin.json`: local plugins, written as bare-name
-  sources (`"source": "skogai-core"`), resolved under `pluginRoot` (`./plugins/`).
+  `renames`, ...). `version` is bumped automatically.
+- `plugins/*/.claude-plugin/plugin.json`: local plugins, written as
+  `"source": "./plugins/skogai-core"`. claude.ai organization sync rejects bare
+  names under `metadata.pluginRoot`, so there is none.
 - `.claude-plugin/external-repos.json`: plugins in other repos, as an array of
   plugin source objects copied verbatim into `marketplace.json`.
 
@@ -61,12 +62,12 @@ Two ways to bring in a plugin from another repo:
   { "source": "git-subdir", "url": "openai/codex-plugin-cc", "path": "plugins/codex" }
   ```
   Supported types: `github`, `url`, `git-subdir` (with optional `ref`/`sha`).
-- **Vendor it**: `git submodule add <url> plugins/<name>` when you want to edit
-  or pin it. The generator picks it up as a local plugin.
+  Pin with `ref`/`sha` rather than vendoring; no submodules.
 
-A repo that ships `.claude-plugin/marketplace.json` instead of `plugin.json`
-is a marketplace, not a plugin: add it with `/plugin marketplace add` rather
-than listing it here.
+A repo without `plugin.json` can still be listed when its own
+`.claude-plugin/marketplace.json` has a single `"./"` entry: the generator
+takes name and description from it and adds `"strict": false`, so the entry
+is the manifest.
 
 ## Runtime State and Logs
 

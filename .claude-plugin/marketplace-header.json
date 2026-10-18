@@ -6,9 +6,6 @@
     "name": "skogix",
     "url": "https://github.com/skogai"
   },
-  "metadata": {
-    "pluginRoot": "./plugins/"
-  },
   "renames": {
     "forge": null,
     "verity": null,
