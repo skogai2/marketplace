@@ -1,0 +1,17 @@
+name: marketplace
+
+on:
+  push:
+    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh"]
+  pull_request:
+    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: marketplace.json matches the generator
+        run: scripts/generate-marketplace-json.sh --check
+        env:
+          GH_TOKEN: ${{ github.token }}

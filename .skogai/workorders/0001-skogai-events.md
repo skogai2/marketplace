@@ -113,7 +113,6 @@ Each one says which step it blocks.
 
 ## Out of scope
 
-- `plugins/open-knowledge-plugin` has no `.claude-plugin/plugin.json`, so the marketplace generator skips it.
 - `mise install` fails for worktrunk, because upstream returns 404 for its skill files.
 - Defining `core`.
 

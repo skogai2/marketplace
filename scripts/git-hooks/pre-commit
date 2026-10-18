@@ -3,5 +3,18 @@
 
 // Installed via: git config core.hooksPath scripts/git-hooks
 // Reference-name scan: private blocklist (gitignored), fail-open when absent.
+// Marketplace drift: when a manifest is staged, marketplace.json must match
+// what scripts/generate-marketplace-json.sh would write.
+const { execFileSync, spawnSync } = require("child_process");
+
 process.argv[2] = "staged";
-process.exit(require("./check-reference-names.js").main());
+const refs = require("./check-reference-names.js").main();
+if (refs !== 0) process.exit(refs);
+
+const staged = execFileSync("git", ["diff", "--cached", "--name-only"], { encoding: "utf8" }).split("\n");
+if (staged.some((f) => /^(\.claude-plugin\/|plugins\/[^/]+\/\.claude-plugin\/)/.test(f))) {
+  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const r = spawnSync(`${root}/scripts/generate-marketplace-json.sh`, ["--check"], { stdio: ["ignore", "ignore", "inherit"] });
+  process.exit(r.status ?? 1);
+}
+process.exit(0);

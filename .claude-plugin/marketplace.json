@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -32,6 +32,14 @@
         "url": "https://github.com/skogai2/loadout.git"
       },
       "description": "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
+    },
+    {
+      "name": "open-knowledge-plugin",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/skogai2/open-knowledge-plugin.git"
+      },
+      "description": "Author, maintain, backfill, validate, visualize and serve (MCP) Open Knowledge Format (OKF) bundles."
     },
     {
       "name": "skogai-core",
