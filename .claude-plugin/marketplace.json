@@ -35,7 +35,9 @@
     },
     {
       "name": "skogai-core",
-      "source": "skogai-core",
+        "source": "git-subdir",
+        "url": "https://github.com/skogai2/marketplace.git",
+        "path": "plugins/skogai-core",
       "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
     }
   ]
