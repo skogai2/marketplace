@@ -9,6 +9,7 @@
   "metadata": {
     "pluginRoot": "./plugins/"
   },
+
   "renames": {
     "forge": null,
     "verity": null,

@@ -1,6 +1,6 @@
 {
   "name": "skogai-core",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line.",
   "author": {
     "name": "Emil Skogsund"
