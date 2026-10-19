@@ -1,9 +1,4 @@
 # Worktrunk project hooks — see https://worktrunk.dev
-#
-# New worktrees start with empty submodule directories; populate them before
-# anything else touches the worktree (pre-start blocks until done).
-[pre-start]
-submodules = "git submodule update --init"
 
 # Installed copies of these plugins come from the GitHub remote, not this
 # checkout. After a merge into the default branch, publish it and refresh the

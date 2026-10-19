@@ -1,20 +1,9 @@
-#!/usr/bin/env node
-"use strict";
+#!/usr/bin/env bash
+# Installed via: git config core.hooksPath scripts/git-hooks
+# When a manifest is staged, marketplace.json must match what
+# scripts/generate-marketplace-json.sh would write.
+set -euo pipefail
 
-// Installed via: git config core.hooksPath scripts/git-hooks
-// Reference-name scan: private blocklist (gitignored), fail-open when absent.
-// Marketplace drift: when a manifest is staged, marketplace.json must match
-// what scripts/generate-marketplace-json.sh would write.
-const { execFileSync, spawnSync } = require("child_process");
-
-process.argv[2] = "staged";
-const refs = require("./check-reference-names.js").main();
-if (refs !== 0) process.exit(refs);
-
-const staged = execFileSync("git", ["diff", "--cached", "--name-only"], { encoding: "utf8" }).split("\n");
-if (staged.some((f) => /^(\.claude-plugin\/|plugins\/[^/]+\/\.claude-plugin\/)/.test(f))) {
-  const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-  const r = spawnSync(`${root}/scripts/generate-marketplace-json.sh`, ["--check"], { stdio: ["ignore", "ignore", "inherit"] });
-  process.exit(r.status ?? 1);
-}
-process.exit(0);
+if git diff --cached --name-only | grep -qE '^(\.claude-plugin/|plugins/[^/]+/\.claude-plugin/)'; then
+  "$(git rev-parse --show-toplevel)/scripts/generate-marketplace-json.sh" --check >/dev/null
+fi

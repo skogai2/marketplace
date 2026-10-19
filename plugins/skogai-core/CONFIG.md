@@ -95,7 +95,7 @@ Never in config, in any layer. Secrets live in fnox and only reach tasks that de
 3. **skogai-core `git-steps.sh`:** done. It reads `skogai config list` from the git root and falls back to env (`SKOGAI_STAGE_ONSTOP`, ...) when no working `skogai` is on PATH, with the names dash's rule gives (`.` → `_`, `-` dropped, since dash `820af35`).
 4. **skogai-core `settings.sh` and `register.ts`:** done. Both read `skogai config list --file <root>/.claude/skogai-core.md --scope skogai-core` and fall back to reading the `.local.md` themselves when `skogai` doesn't know `--file`, for a `skogai` without `--file` (another machine, or none installed). Keys are kebab-case (`log-path`); `_` still reads.
 5. **mise:** the `SKOGAI_*_ON_*` lines in `~/.config/mise/config.toml` are commented out and use the old names. Put the values in `~/.skogai/config` instead, and drop the lines.
-6. **Delete** `~/marketplace/scripts/parse-frontmatter.sh` and the copies of `validate-settings.sh` / `example.local.md` in `dash-skogai/`, once the dash type checks config.
+6. **Delete** the copies of `validate-settings.sh` / `example.local.md` in `dash-skogai/`, once the dash type checks config.
 
 ## Decisions for skogix
 

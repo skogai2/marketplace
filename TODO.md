@@ -12,7 +12,7 @@ Manual steps from CLAUDE.md that could be enforced instead of remembered.
 
 ## Next steps
 
-- [ ] Review `todo/` merge into or add as marketplace plugins.
+- [x] Review `todo/` merge into or add as marketplace plugins.
 - [ ] Add a `*.test.ts` for skogai-core so `claude plugin test` has something to run.
 
 ## User input
