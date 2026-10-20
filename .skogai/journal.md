@@ -1878,3 +1878,40 @@ Next is A3: one file and one schema per event in `type/event/`. One choice befor
 
 - Bash: `cd ~/skogai; git add dash-skogai/type/event.md dash-skogai/type/event.schema.json dash-skogai/type/type.md dash-skogai/t…`
 
+## 2026-10-20 21:04 · turn f41bbde0
+
+**User**
+
+> anything we can do something about?
+>
+> ● Ran 7 stop hooks
+>   ⎿  Stop hook error: Failed with non-blocking status code: /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts/events/Stop.sh: line 31: /bin/jq: Argument list too long
+
+**Assistant**
+
+Yes, I fixed it and committed it as `79a218a`.
+
+**Cause:** `Stop.sh` handed this turn's log rows and the hook input to `jq` as command-line arguments (`--argjson rows "$rows" --argjson stop "$input"`). Linux caps a single argument at about 128 KB. A turn with many or large tool uses goes over that, so the hook failed and that turn's journal entry was never written.
+
+**Fix:** the rows now reach `jq` through a file (`--slurpfile rows <(turn_rows)`) and the hook input comes in on stdin, so there's no size limit any more. I also added `|| true` after the `grep`, so a turn with no matching rows can't trip `pipefail`.
+
+**Checks:**
+- The skogai-core test suite passes.
+- A made-up turn of about 15 MB (50 tool uses of 300 KB each) wrote all 50 actions to the journal and exited 0.
+
+No other script in the repo passes large data to `jq` this way. The hook runs from this source directory, so the fix applies from your next turn.
+
+**Actions**
+
+- Bash: `rtk read -n /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts/events/Stop.sh`
+- Bash: `grep -rn -- '--argjson\|--arg [a-z_]* "\$input"' plugins/*/scripts | rtk grep -v '^.*--arg root\|--arg ts'` (failed)
+- Bash: `grep -rn -- '--argjson\|--arg' plugins/ --include=*.sh | rtk grep -v 'arg root\|arg ts\|arg p '` (failed)
+- Bash: `rtk grep -rn -e '--argjson' -e '--arg ' plugins/ --include='*.sh'`
+- Bash: `cd plugins/skogai-core/scripts/events && python3 - <<'EOF'`
+- Bash: `cd /home/skogix/.local/src/marketplace && bash plugins/skogai-core/tests/run.sh 2>&1 | tail -15`
+- Bash: `cd "$(mktemp -d)" && git init -q && mkdir -p .skogai && big=$(head -c 300000 /dev/zero | tr '\0' x) && log=$PWD/log.json…` (failed)
+- Bash: `cd "$(mktemp -d)" && git init -q && mkdir -p .skogai && log=$PWD/log.jsonl && head -c 300000 /dev/zero | tr '\0' x > big…`
+- Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts && rtk grep -n 'SKOGAI_LOG' settings.sh | head`
+- Bash: `cd "$(mktemp -d)" && git init -q && log=.skogai/logs/skogai-core/log.jsonl && mkdir -p $(dirname $log) && head -c 300000…`
+- Bash: `rtk git commit -qam "skogai-core Stop: pass turn rows and input to jq via file/stdin, not argv`
+

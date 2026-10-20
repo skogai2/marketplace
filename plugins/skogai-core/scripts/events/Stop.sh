@@ -20,12 +20,15 @@ log=$SKOGAI_LOG
 journal="$root/.skogai/journal.md"
 prompt_id=$(jq -r '.prompt_id // empty' <<<"$input")
 
-# grep narrows the log to this turn before jq parses anything. The rows and the
-# stop input reach jq as a file and stdin: as arguments a long turn exceeds the
-# kernel's per-argument limit.
+# The turn's rows sit at the end of the log, after its UserPromptSubmit row, so
+# read backwards and stop there instead of scanning the whole log. The rows and
+# the stop input reach jq as a file and stdin: as arguments a long turn exceeds
+# the kernel's per-argument limit.
 turn_rows() {
   [[ -n $prompt_id && -f $log ]] || return 0
-  grep -F "$prompt_id" "$log" |
+  tac "$log" |
+    awk -v p="$prompt_id" 'index($0, p) { print; if (index($0, "\"event\":\"UserPromptSubmit\"")) exit }' |
+    tac |
     jq -c --arg p "$prompt_id" 'select(.input.prompt_id == $p and .input.agent_id == null)' || true
 }
 
