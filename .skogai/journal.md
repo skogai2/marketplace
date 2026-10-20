@@ -1915,3 +1915,336 @@ No other script in the repo passes large data to `jq` this way. The hook runs fr
 - Bash: `cd "$(mktemp -d)" && git init -q && log=.skogai/logs/skogai-core/log.jsonl && mkdir -p $(dirname $log) && head -c 300000…`
 - Bash: `rtk git commit -qam "skogai-core Stop: pass turn rows and input to jq via file/stdin, not argv`
 
+## 2026-10-20 21:05 · turn 14403c47
+
+**User**
+
+> now honestly why do we run over the whole file each turn? or am i missing something?
+
+**Assistant**
+
+You weren't missing anything; the hook was doing wasted work. The log only ever grows, and on every turn end the Stop hook `grep`ped the whole file for rows that are always at the end. I changed it to read the log backwards from the end and stop at this turn's `UserPromptSubmit` row, so each turn now reads only its own rows, however big the log gets. Committed as `8570c66`.
+
+- **Tests:** the test suite passes. In a check with 20,000 older rows ahead of a 3-action turn, the journal got exactly that turn's prompt, reply and 3 actions.
+- **One case it doesn't fix:** if your settings leave `UserPromptSubmit` out of the logged events, there's no row to stop at, so it still reads the whole file, as before.
+- **Still open:** the log is never rotated. It's 1.5 MB now and Stop no longer pays for its size, but it will keep growing. I left that alone; it's your call whether it should be capped.
+
+**Actions**
+
+- Bash: `rtk ls -la .skogai/logs/skogai-core/ 2>/dev/null; rtk wc -l .skogai/logs/skogai-core/log.jsonl 2>/dev/null; rtk read plu…`
+- Edit `plugins/skogai-core/scripts/events/Stop.sh`
+- Bash: `bash plugins/skogai-core/tests/run.sh 2>&1 | grep -v '^ok' ; echo "---"; cd "$(mktemp -d)" && git init -q && log=.skogai…`
+- Bash: `rtk git commit -qam "skogai-core Stop: read the log backwards to this turn's prompt, not the whole file`
+
+## 2026-10-20 21:09 · turn 69ffefe1
+
+**User**
+
+> <prompt>
+> the file is a slice of a session journal: turns between a user and an assistant.
+> pick out what is worth keeping after the session:
+> - decision: something settled, with why
+> - doc: how something works now, worth writing down
+> - todo: still open at the end of the slice
+> - learning: a gotcha or rule found the hard way
+> skip chatter, anything superseded later in the slice, and anything only true for that conversation.
+> turn is the id after "turn" in the heading where it was settled. an empty list is fine.
+> </prompt>
+>
+> <file path="/tmp/tmp.sWKHZfD6XV/000.md">
+> ## 2026-10-17 08:40 · turn 90c581fa
+>
+> **User**
+>
+> > /worktrunk:wt-switch-create pr:1
+>
+> **Assistant**
+>
+> I couldn't create a worktree for PR #1. The PR is closed and its branch (`ccr-b54a7506-8d3g4g`) has been deleted from origin, so `wt switch pr:1` had nothing to fetch.
+>
+> GitHub still keeps the PR's commits under `refs/pull/1/head`. If you want them, I can run `git fetch origin pull/1/head:pr-1` and put a worktree on the new local branch `pr-1`. Should I?
+>
+> **Actions**
+>
+> - Bash: `wt switch pr:1 --no-cd --format=json` (failed)
+>
+> ## 2026-10-17 08:47 · turn f6c5a8bd
+>
+> **User**
+>
+>
+>
+> **Assistant**
+>
+> I haven't started on the workorder yet, because git state changed under me. It isn't on master; I found it as `.skogai/workorders/0001-skogai-events.md` in commit `c74b774`, which is only on `origin/ccr-8ff7c037-5vfd1h`.
+>
+> - **Master:** the old 43-line `plugins/skogai-core/PLAN.md` is back.
+> - **Stashes:** two new ones, `stash@{0}` (journal) and `stash@{1}` "skogai-events workorder".
+> - **History:** master was rebased, so my commit is now `a18e013`, not `f3c04c8`.
+> - **Worktree:** `.skogai/worktrees/skogai-events` exists.
+>
+> I left all of that alone.
+>
+> **Correction:** my earlier "fix" to the CONFIG.md link was wrong. The file lives in `.skogai/workorders/`, so `../../plugins/skogai-core/CONFIG.md` was the right path. Only the test count needs changing (8 → 9).
+>
+> **Your answers, as I'll write them into the workorder:**
+> - **Owners:** the parent owns the folder, and each instance owns its own files.
+> - **Defaults:** opt-in. Every event is off until a repo enables it, and a missing event file means the event is off.
+> - **Pinned event files:** the plugin keeps them in `type/event/`, mirroring dash.
+> - **Log path:** paths under `.skogai/logs` and `.skogai/tmp` are temporary. On the rename, the old log is dropped rather than carried over, and the new path loses the plugin name. I'd use `.skogai/logs/event.jsonl`.
+>
+> I saved the opt-in and temporary-paths rules as a memory (`temporary-paths`).
+>
+> Next I'd cherry-pick `c74b774` onto master and add the decisions and the test count to the workorder, then start on A1 and A2 (`type/event.md` and the row schema) in `~/skogai/dash-skogai`. Since you seem to be moving branches around right now, should I go ahead, or wait until you've finished?
+>
+> **Actions**
+>
+> - Bash: `cd ~/.local/src/marketplace; ls docs/hooks.md; grep -c "^ok\|^FAIL" <(bash plugins/skogai-core/tests/run.sh 2>&1); grep …`
+> - Bash: `cd ~/.local/src/marketplace/plugins/skogai-core; sed -i 's|(see \[CONFIG.md\](../../plugins/skogai-core/CONFIG.md), step…`
+> - AskUserQuestion
+> - Bash: `rtk read ~/skogai/.skogai/memory/offer-dont-install.md; sed -n 30,45p PLAN.md; sed -n 100,125p PLAN.md; rtk read .gitign…`
+> - Bash: `rtk read PLAN.md --head-lines 5; rtk wc -l PLAN.md; rtk git -C ~/.local/src/marketplace status --short; rtk git -C ~/.lo…`
+> - Bash: `cd ~/.local/src/marketplace/.skogai/worktrees/skogai-events && rtk git status --short && rtk read plugins/skogai-core/PL…` (failed)
+> - Bash: `cd ~/.local/src/marketplace; rtk git stash list; git reflog -8; rtk git log --all --oneline -8 -- plugins/skogai-core/PL…`
+> - Bash: `cd ~/.local/src/marketplace; git branch -a --contains c74b774; git show --stat c74b774 | head -12; git stash show stash@…`
+> - Bash: `cat > ~/skogai/.skogai/memory/temporary-paths.md <<'EOF'`
+>
+> ## 2026-10-17 08:58 · turn 49fd8b70
+>
+> **User**
+>
+>
+>
+> **Assistant**
+>
+> The worktree is gone, and the PLAN.md rewrite is back in master's working tree, where it started.
+>
+> - **Why it got there:** `/usr/bin/git` gets past the rtk rewrite, so `git stash apply` worked. But `skogai-events` is no longer in `git worktree list`, and the branch doesn't exist anymore. Git walked up from the leftover directory and applied the stash to master.
+> - **Leftover directory:** `.skogai/worktrees/skogai-events/` holds nothing but a `.skogai/` subdirectory, probably written by the journal hook.
+> - **New stash I didn't make:** `stash@{0}` is "WIP on skogai-events". Whatever removed the worktree seems to have stashed something on the way out. I haven't touched it.
+> - **My stash is still there:** `stash@{1}` ("skogai-events workorder") wasn't dropped, because I used apply rather than pop.
+> - **master's working tree now:** `journal.md`, `TODO.md` and `plugins/skogai-core/PLAN.md` are modified. I didn't touch `TODO.md`.
+>
+> I've stopped here. Should I drop both stashes and remove the leftover directory, then make the worktree again with `wt switch --create`? A worktree made that way stays when the session ends.
+>
+> **Actions**
+>
+> - Bash: `rtk bypass git stash list --format='%H %gd %gs'` (failed)
+> - Bash: `/usr/bin/git stash list --format='%H %gd %gs'`
+> - Bash: `/usr/bin/git stash apply 1370ad2996e060e4c1bd9354c374a152c624acf3 && /usr/bin/git status --short`
+> - Bash: `rtk ls -la; /usr/bin/git worktree list; /usr/bin/git branch --list 'skogai-events*'`
+>
+> ## 2026-10-17 09:03 · turn 5192e60f
+>
+> **User**
+>
+> > yeah that all went into chaos. feel free to fix back the git state as you see fit
+>
+> **Assistant**
+>
+> Master is back in order and pushed. It now ends with the workorder commit and your decisions on top:
+>
+> ```
+> da2263f Workorder 0001: record owners, opt-in, pin paths, throwaway logs
+> dc2ac12 Workorder 0001: skogai-events; replaces skogai-core PLAN.md   (cherry-picked c74b774)
+> a18e013 skogai-core: env names follow dash's rule (- dropped), docs catch up
+> ```
+>
+> - **Workorder:** it now lives at `.skogai/workorders/0001-skogai-events.md`, and `plugins/skogai-core/PLAN.md` is gone. My earlier change to its CONFIG.md link was discarded, since the original path is right from that folder.
+> - **TODO.md:** someone had appended the old plan to it; I removed that copy, since the workorder replaces it.
+> - **Decisions recorded:** parent owns the folder, events are opt-in (a missing file means off), pinned files sit at `type/event/` like dash, and the log moves to `.skogai/logs/event.jsonl` with the old one dropped. The test count is fixed (9). Two questions are still open: where a repo records the dash commit it pins (`dash.ref`), and the workorder type itself.
+> - **Worktree:** the broken `skogai-events` worktree is pruned and its folder removed. It only held one log file.
+> - **Journal:** `.skogai/journal.md` still has uncommitted changes. The Stop hook writes it, so I left it alone.
+>
+> The auto-mode classifier blocked the deletions, so these are left for you. Everything they remove is either already on master or a superseded copy:
+>
+> ```
+> ! git branch -D merge-or-not && git push origin --delete merge-or-not skogai-events && git stash clear
+> ```
+>
+> PR #4 (`ccr-8ff7c037-5vfd1h`) is still open, though its content is now on master; you can close it with `gh pr close 4 --delete-branch`.
+>
+> Next is A1 and A2 in `~/skogai/dash-skogai`: `type/event.md` and the row schema.
+>
+> **Actions**
+>
+> - Bash: `cd ~/.local/src/marketplace; git status --short; git branch -vv; git log --oneline --graph -12 --all | head -40; git sta…`
+> - Bash: `cd ~/.local/src/marketplace; rtk ls -la .skogai/worktrees/skogai-events | head; rtk read .skogai/worktrees/skogai-events…`
+> - Bash: `cd ~/.local/src/marketplace; rtk find .skogai/worktrees/skogai-events -type f | head; rtk read .git/worktrees/skogai-eve…`
+> - Bash: `cd ~/.local/src/marketplace; rtk find .skogai/worktrees -type f; rtk git worktree list; rtk git worktree prune -v`
+> - Bash: `cd ~/.local/src/marketplace; rtk bypass find .skogai/worktrees -type f -exec ls -la {} \;`
+> - Bash: `cd ~/.local/src/marketplace; rm -rf .skogai/worktrees`
+> - Bash: `cd ~/.local/src/marketplace; grep -n "" .skogai/workorders/0001-skogai-events.md | sed -n '25,40p;55,75p;84,125p'`
+> - Bash: `cd ~/.local/src/marketplace; python3 - <<'EOF'`
+> - Bash: `cd ~/.local/src/marketplace; rtk git add .skogai/workorders/0001-skogai-events.md && rtk git commit -q -m "Workorder 000…`
+> </file>
+
+**Assistant**
+
+_(no text)_
+
+**Actions**
+
+- StructuredOutput
+
+## 2026-10-20 21:09 · turn 70f63e68
+
+**User**
+
+> <prompt>
+> the file is a slice of a session journal: turns between a user and an assistant.
+> pick out what is worth keeping after the session:
+> - decision: something settled, with why
+> - doc: how something works now, worth writing down
+> - todo: still open at the end of the slice
+> - learning: a gotcha or rule found the hard way
+> skip chatter, anything superseded later in the slice, and anything only true for that conversation.
+> turn is the id after "turn" in the heading where it was settled. an empty list is fine.
+> </prompt>
+>
+> <file path="/tmp/tmp.sWKHZfD6XV/001.md">
+> ## 2026-10-17 11:54 · turn 2f408fe9
+>
+> **User**
+>
+> > Generate up to 3 alternative conventional commit messages (feat/fix/docs/refactor/chore/test/perf/build/ci/style) for the following git diff. Output ONLY the commit messages, one per line, at most 3 lines. Each message must be a single line in English with a subject of at most 72 characters. No numbering, no bullets, no markdown, no quotes, no explanations.
+> > STAGED DIFF OVERVIEW
+> > total: 1 files, +126 -0
+> > M +126 -0 .skogai/journal.md
+> >
+> > COVERAGE: sampled 0/1 files, 0/1 hunks; input is a sample of the staged diff
+>
+> **Assistant**
+>
+> docs(journal): add 2026-10-17 session entries
+> chore(journal): record worktree and workorder session notes
+> chore: update session journal
+>
+> **Actions**
+>
+> - Bash: `rtk git -C /home/skogix/.local/src/marketplace diff --cached --stat && rtk git -C /home/skogix/.local/src/marketplace di…`
+>
+> ## 2026-10-17 16:04 · turn d2537796
+>
+> **User**
+>
+>
+>
+> **Assistant**
+>
+> Both are committed, and `dash:check` still hasn't been run on any of it.
+>
+> - **dash (`93be788`, in `~/skogai`, not pushed):** this commits the event type, its schema and one-step ownership. `type` owns `type/event.md` and `type/event.schema.json`; `event` owns `type/event/<name>.md`, `<name>.schema.json` and `scripts/event/<name>.sh`. Your own uncommitted changes there (`herdr.md`, `wt.md` and others) are not part of the commit.
+> - **Marketplace (`33b081a`, pushed):** A1 and A2 are ticked in the workorder. I also corrected decision 5 there: it still said "the parent owns the folder", so it now describes one-step ownership like dash.
+>
+> Next is A3: one file and one schema per event in `type/event/`. One choice before I start: dash's file names are lowercase (`gita.md`), while event names are written like `Stop`. I'd name the files `stop.md` and keep `title: Stop`, unless you'd rather have `Stop.md`.
+>
+> **Actions**
+>
+> - Bash: `cd ~/skogai; git add dash-skogai/type/event.md dash-skogai/type/event.schema.json dash-skogai/type/type.md dash-skogai/t…`
+>
+> ## 2026-10-20 21:04 · turn f41bbde0
+>
+> **User**
+>
+> > anything we can do something about?
+> >
+> > ● Ran 7 stop hooks
+> >   ⎿  Stop hook error: Failed with non-blocking status code: /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts/events/Stop.sh: line 31: /bin/jq: Argument list too long
+>
+> **Assistant**
+>
+> Yes, I fixed it and committed it as `79a218a`.
+>
+> **Cause:** `Stop.sh` handed this turn's log rows and the hook input to `jq` as command-line arguments (`--argjson rows "$rows" --argjson stop "$input"`). Linux caps a single argument at about 128 KB. A turn with many or large tool uses goes over that, so the hook failed and that turn's journal entry was never written.
+>
+> **Fix:** the rows now reach `jq` through a file (`--slurpfile rows <(turn_rows)`) and the hook input comes in on stdin, so there's no size limit any more. I also added `|| true` after the `grep`, so a turn with no matching rows can't trip `pipefail`.
+>
+> **Checks:**
+> - The skogai-core test suite passes.
+> - A made-up turn of about 15 MB (50 tool uses of 300 KB each) wrote all 50 actions to the journal and exited 0.
+>
+> No other script in the repo passes large data to `jq` this way. The hook runs from this source directory, so the fix applies from your next turn.
+>
+> **Actions**
+>
+> - Bash: `rtk read -n /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts/events/Stop.sh`
+> - Bash: `grep -rn -- '--argjson\|--arg [a-z_]* "\$input"' plugins/*/scripts | rtk grep -v '^.*--arg root\|--arg ts'` (failed)
+> - Bash: `grep -rn -- '--argjson\|--arg' plugins/ --include=*.sh | rtk grep -v 'arg root\|arg ts\|arg p '` (failed)
+> - Bash: `rtk grep -rn -e '--argjson' -e '--arg ' plugins/ --include='*.sh'`
+> - Bash: `cd plugins/skogai-core/scripts/events && python3 - <<'EOF'`
+> - Bash: `cd /home/skogix/.local/src/marketplace && bash plugins/skogai-core/tests/run.sh 2>&1 | tail -15`
+> - Bash: `cd "$(mktemp -d)" && git init -q && mkdir -p .skogai && big=$(head -c 300000 /dev/zero | tr '\0' x) && log=$PWD/log.json…` (failed)
+> - Bash: `cd "$(mktemp -d)" && git init -q && mkdir -p .skogai && log=$PWD/log.jsonl && head -c 300000 /dev/zero | tr '\0' x > big…`
+> - Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core/scripts && rtk grep -n 'SKOGAI_LOG' settings.sh | head`
+> - Bash: `cd "$(mktemp -d)" && git init -q && log=.skogai/logs/skogai-core/log.jsonl && mkdir -p $(dirname $log) && head -c 300000…`
+> - Bash: `rtk git commit -qam "skogai-core Stop: pass turn rows and input to jq via file/stdin, not argv`
+>
+> ## 2026-10-20 21:05 · turn 14403c47
+>
+> **User**
+>
+> > now honestly why do we run over the whole file each turn? or am i missing something?
+>
+> **Assistant**
+>
+> You weren't missing anything; the hook was doing wasted work. The log only ever grows, and on every turn end the Stop hook `grep`ped the whole file for rows that are always at the end. I changed it to read the log backwards from the end and stop at this turn's `UserPromptSubmit` row, so each turn now reads only its own rows, however big the log gets. Committed as `8570c66`.
+>
+> - **Tests:** the test suite passes. In a check with 20,000 older rows ahead of a 3-action turn, the journal got exactly that turn's prompt, reply and 3 actions.
+> - **One case it doesn't fix:** if your settings leave `UserPromptSubmit` out of the logged events, there's no row to stop at, so it still reads the whole file, as before.
+> - **Still open:** the log is never rotated. It's 1.5 MB now and Stop no longer pays for its size, but it will keep growing. I left that alone; it's your call whether it should be capped.
+>
+> **Actions**
+>
+> - Bash: `rtk ls -la .skogai/logs/skogai-core/ 2>/dev/null; rtk wc -l .skogai/logs/skogai-core/log.jsonl 2>/dev/null; rtk read plu…`
+> - Edit `plugins/skogai-core/scripts/events/Stop.sh`
+> - Bash: `bash plugins/skogai-core/tests/run.sh 2>&1 | grep -v '^ok' ; echo "---"; cd "$(mktemp -d)" && git init -q && log=.skogai…`
+> - Bash: `rtk git commit -qam "skogai-core Stop: read the log backwards to this turn's prompt, not the whole file`
+> </file>
+
+**Assistant**
+
+_(no text)_
+
+**Actions**
+
+- StructuredOutput
+
+## 2026-10-20 21:09 · turn c71523ce
+
+**User**
+
+> hi claude!. i would love to actuall "make" something from all the docs we are saving up. for example "filtering out all the users input" or using subagents / local agents to look at the logs and picking out decisions,  documentation ect ect?
+
+**Assistant**
+
+I added two commands to the argc runner, and both work on your journals. Committed as `ea7c48f`.
+
+**`argc journal prompts [file] [--last N] [--md]`** pulls out only your inputs, one JSON row per turn with `{ts, turn, prompt}`. It runs in plain awk and jq with no agent, so it's instant and costs nothing. It found all 60 turns in this repo's journal and all 177 in `~/skogai/.skogai/journal.md`. Some rows have an empty prompt (5 in the `~/skogai` journal), because those turns are empty in the journal itself.
+
+**`argc journal harvest [file] [--last N] [--turns N]`** splits the journal into chunks of 20 turns by default. One sonnet worker reads each chunk and returns items, each with a kind (`decision`, `doc`, `todo` or `learning`), a title, a body and the turn id it came from. All items come back as one JSON array, and the schema is in `plugins/skogai-runner/schemas/harvest.json`. A test run on the last 8 turns took 23s and returned 12 useful items, for example:
+- **Learning:** jq fails with "Argument list too long" on big arguments, so pass the data via `--slurpfile` or stdin.
+- **Todo:** decide whether to rotate or cap the skogai-core log.
+- **Todo:** close PR #4 and clean up the leftover branches and stashes.
+- **Decision:** the Stop hook reads the log backwards to the current turn's prompt.
+
+Both commands only read: they print to stdout and write nothing back.
+
+The obvious next step is a `--apply` mode that files the harvest where it belongs: learnings into `LEARNINGS.md` and decisions into `.skogai/memory/`. It would first check for existing entries so it doesn't add duplicates. Should I build that, or would you rather run `harvest` over the full `~/skogai` journal first and look at the results? That's about 9 chunks, so roughly 2–3 minutes of sonnet calls.
+
+**Actions**
+
+- Bash: `cd /home/skogix/.local/src/marketplace; rtk ls plugins; cat CONVENTIONS.md | head -60; rtk ls plugins/skogai-core plugin…`
+- Bash: `cd /home/skogix/.local/src/marketplace; rtk read plugins/skogai-core/README.md plugins/skogai-core/FEATURES.md; rtk read…`
+- Bash: `cd /home/skogix/.local/src/marketplace; rtk grep -c '^## ' .skogai/journal.md ~/skogai/.skogai/journal.md; rtk wc -l .sk…`
+- Bash: `cd /home/skogix/.local/src/marketplace; sed -n 1,80p Argcfile.sh; rtk read plugins/skogai-runner/schemas/answer.json`
+- Bash: `cd /home/skogix/.local/src/marketplace; sed -n 80,400p Argcfile.sh; rtk ls plugins/skogai-runner/schemas plugins/skogai-…`
+- Bash: `cd /home/skogix/.local/src/marketplace; sed -n 19,60p .skogai/journal.md; rtk read plugins/skogai-runner/skills/argc/SKI…`
+- Write `plugins/skogai-runner/schemas/harvest.json`
+- Edit `Argcfile.sh`
+- Edit `Argcfile.sh`
+- Bash: `cd /home/skogix/.local/src/marketplace; argc check 2>&1 | tail -8; argc journal prompts --last 3 --md; argc journal prom…`
+- Bash: `cd /home/skogix/.local/src/marketplace; for f in .skogai/journal.md ~/skogai/.skogai/journal.md; do grep -c '^## [0-9]\{…`
+- Bash: `cd /home/skogix/.local/src/marketplace; sed -i 's/@arg file\[`_choice_journal`\]/@arg file[?`_choice_journal`]/' Argcfil…`
+- Bash: `cd /home/skogix/.local/src/marketplace; python3 - <<'EOF'`
+

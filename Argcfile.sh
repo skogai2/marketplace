@@ -178,6 +178,68 @@ plugin::improve() {
     improve
 }
 
+# @cmd session journals (.skogai/journal.md): read them back, harvest them
+journal() { :; }
+
+# @cmd only the user's input, one json row per turn
+# @arg file[?`_choice_journal`]         journal, default .skogai/journal.md
+# @option --last <N>                   only the last N turns
+# @flag   --md                         markdown instead of json rows
+journal::prompts() {
+    local file="${argc_file:-$ROOT/.skogai/journal.md}"
+    local rows
+    rows="$(_journal_slice "$file" "${argc_last:-0}" | awk '
+        function flush() { if (turn != "") printf "%s\037%s\037%s\036", ts, turn, prompt; prompt = "" }
+        /^## [0-9]{4}-/ { flush(); ts = $2 " " $3; turn = $NF; sec = ""; next }
+        /^\*\*User\*\*$/ { sec = "user"; next }
+        /^\*\*(Assistant|Actions)\*\*$/ { sec = ""; next }
+        sec == "user" && /^>/ { sub(/^> ?/, ""); prompt = prompt (prompt == "" ? "" : "\n") $0 }
+        END { flush() }' |
+        jq -Rsc 'split("\u001e")[:-1][] | split("\u001f") | {ts: .[0], turn: .[1], prompt: .[2]}')"
+    if [[ -n "${argc_md:-}" ]]; then
+        jq -r '"## \(.ts) · turn \(.turn)\n\n\(.prompt)\n"' <<<"$rows"
+    else
+        printf '%s\n' "$rows"
+    fi
+}
+
+# @cmd agents pick decisions, docs, todos and learnings out of a journal
+#
+# the journal is cut into chunks of --turns turns, each chunk goes to one
+# worker with schema `harvest`. stdout is one json array of every item.
+# @arg file[?`_choice_journal`]         journal, default .skogai/journal.md
+# @option --last <N>                   only the last N turns
+# @option --turns <N>                  turns per chunk, default 20
+# @option -m --model                   model, defaults to $SKOGAI_MODEL
+journal::harvest() {
+    local file="${argc_file:-$ROOT/.skogai/journal.md}"
+    local per="${argc_turns:-20}"
+    local dir
+    dir="$(mktemp -d)"
+    trap 'rm -rf "$dir"' RETURN
+    _journal_slice "$file" "${argc_last:-0}" |
+        awk -v per="$per" -v dir="$dir" '/^## [0-9]{4}-/ && n++ % per == 0 { out = sprintf("%s/%03d.md", dir, n / per) } out { print > out }'
+
+    local prompt
+    prompt="$(cat <<'EOF'
+the file is a slice of a session journal: turns between a user and an assistant.
+pick out what is worth keeping after the session:
+- decision: something settled, with why
+- doc: how something works now, worth writing down
+- todo: still open at the end of the slice
+- learning: a gotcha or rule found the hard way
+skip chatter, anything superseded later in the slice, and anything only true for that conversation.
+turn is the id after "turn" in the heading where it was settled. an empty list is fine.
+EOF
+)"
+    local chunk
+    for chunk in "$dir"/*.md; do
+        echo "harvest $(basename "$chunk") ($(grep -c '^## [0-9]' "$chunk") turns)" >&2
+        _compose "$prompt" "$chunk" | _agent harvest "${argc_model:-$SKOGAI_MODEL}" "" "" >"${chunk%.md}.json"
+    done
+    jq -s '[.[].items[]]' "$dir"/*.json
+}
+
 # @cmd static checks on the runner itself: argc parse, shellcheck, schemas, plugins
 check() {
     argc --argc-export Argcfile.sh >/dev/null && echo "ok    argc parse"
@@ -241,6 +303,19 @@ _edit_to_patch() {
         jq -j --arg p "$path" '.files[] | select(.path == $p) | .content' <<<"$out" >"$new"
         diff -u --label "a/$path" --label "b/$path" "$path" "$new" || true
     done < <(jq -r '.files[].path' <<<"$out")
+}
+
+# journal -> its last <n> turns, the whole journal if n is 0
+_journal_slice() {
+    local file="$1" n="$2"
+    [[ -f "$file" ]] || { echo "no such journal: $file" >&2; return 2; }
+    local total
+    total="$(grep -c '^## [0-9]\{4\}-' "$file")"
+    awk -v skip=$((n > 0 && total > n ? total - n : 0)) '/^## [0-9]{4}-/ { i++ } i > skip' "$file"
+}
+
+_choice_journal() {
+    printf '%s\n' "$ROOT/.skogai/journal.md" "$HOME/skogai/.skogai/journal.md"
 }
 
 _body() { awk 'NR==1 && /^---$/ {fm=1; next} fm && /^---$/ {fm=0; next} !fm' "$1"; }

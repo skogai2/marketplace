@@ -31,6 +31,8 @@ send :: (prompt, [file], schema) -> json
 | `argc plugin new <name> <description>` | scaffold `plugins/<name>` |
 | `argc plugin check [name]`, `argc plugin eval <name>` | validate, run evals |
 | `argc plugin improve <name> <request> [--apply]` | `improve` over every file of a plugin |
+| `argc journal prompts [file] [--last N] [--md]` | only the user's input from a session journal, one json row per turn |
+| `argc journal harvest [file] [--last N] [--turns N]` | workers pick decisions, docs, todos, learnings out of a journal (schema `harvest`) |
 | `argc check` | argc parse, shellcheck, schemas, plugins |
 
 ## workorders

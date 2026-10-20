@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "description": "what is worth keeping from a slice of a session journal",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["decision", "doc", "todo", "learning"],
+            "description": "decision: settled, with why. doc: how something works now. todo: still open. learning: a rule found the hard way"
+          },
+          "title": { "type": "string", "description": "one line" },
+          "body": { "type": "string", "description": "the fact itself and why, three sentences at most" },
+          "turn": { "type": "string", "description": "turn id from the heading where it was settled" }
+        },
+        "required": ["kind", "title", "body", "turn"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}
