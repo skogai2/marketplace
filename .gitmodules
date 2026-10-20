@@ -1,0 +1,3 @@
+[submodule "plugins/context7"]
+	path = plugins/context7
+	url = https://github.com/upstash/context7.git
