@@ -20,16 +20,19 @@ log=$SKOGAI_LOG
 journal="$root/.skogai/journal.md"
 prompt_id=$(jq -r '.prompt_id // empty' <<<"$input")
 
-# grep narrows the log to this turn before jq parses anything.
-rows='[]'
-if [[ -n $prompt_id && -f $log ]]; then
-  rows=$(grep -F "$prompt_id" "$log" |
-    jq -sc --arg p "$prompt_id" 'map(select(.input.prompt_id == $p and .input.agent_id == null))')
-fi
+# grep narrows the log to this turn before jq parses anything. The rows and the
+# stop input reach jq as a file and stdin: as arguments a long turn exceeds the
+# kernel's per-argument limit.
+turn_rows() {
+  [[ -n $prompt_id && -f $log ]] || return 0
+  grep -F "$prompt_id" "$log" |
+    jq -c --arg p "$prompt_id" 'select(.input.prompt_id == $p and .input.agent_id == null)' || true
+}
 
 mkdir -p "$(dirname "$journal")"
-jq -rn --argjson rows "$rows" --argjson stop "$input" --arg root "$root" \
+jq -r --slurpfile rows <(turn_rows) --arg root "$root" \
   --arg ts "$(date +'%Y-%m-%d %H:%M')" '
+  . as $stop |
   def first_line: split("\n")[0] | if length > 120 then .[:120] + "…" else . end;
   def rel: if type == "string" and startswith($root + "/") then .[($root | length) + 1:] else tostring end;
   def quote: split("\n") | map(if . == "" then ">" else "> " + . end) | join("\n");
@@ -47,7 +50,7 @@ jq -rn --argjson rows "$rows" --argjson stop "$input" --arg root "$root" \
     "**User**", ($prompt | gsub("^\\s+|\\s+$"; "") | quote),
     "**Assistant**", (($stop.last_assistant_message // "") | gsub("^\\s+|\\s+$"; "") | if . == "" then "_(no text)_" else . end) ]
   + (if ($actions | length) > 0 then ["**Actions**", ($actions | map("- " + .) | join("\n"))] else [] end)
-  | join("\n\n") + "\n"' >>"$journal"
+  | join("\n\n") + "\n"' <<<"$input" >>"$journal"
 
 ran=$("$here/../git-steps.sh" STOP "$root")
 "$here/../write-state.sh" "$root"
