@@ -1,0 +1,6 @@
+{
+  "name": "skogai-runner",
+  "version": "0.1.0",
+  "description": "the skogai command runner: argc recipes that hand typed work to agents and improve themselves",
+  "author": { "name": "skogix" }
+}

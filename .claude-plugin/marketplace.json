@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -43,6 +43,11 @@
       "name": "skogai-core",
       "source": "./plugins/skogai-core",
       "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
+    },
+    {
+      "name": "skogai-runner",
+      "source": "./plugins/skogai-runner",
+      "description": "the skogai command runner: argc recipes that hand typed work to agents and improve themselves"
     }
   ]
 }

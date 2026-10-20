@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "description": "a short checkable answer to one bounded question",
+  "properties": {
+    "answer": { "type": "string", "description": "the answer, one paragraph at most" },
+    "evidence": {
+      "type": "array",
+      "description": "where the answer comes from",
+      "items": { "type": "string", "description": "path, path:line or command" }
+    },
+    "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+  },
+  "required": ["answer", "evidence", "confidence"],
+  "additionalProperties": false
+}

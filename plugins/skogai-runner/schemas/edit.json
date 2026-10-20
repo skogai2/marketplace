@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "description": "whole-file edits; the runner derives the patch",
+  "properties": {
+    "summary": { "type": "string", "description": "one line: what changed and why" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "relative to the repo root, one of the handed-over files" },
+          "content": { "type": "string", "description": "the complete new file content" }
+        },
+        "required": ["path", "content"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["summary", "files"],
+  "additionalProperties": false
+}

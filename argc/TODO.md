@@ -1,0 +1,11 @@
+- [ ] argc;load `plugins/skogai-runner` in sessions (`--plugin-dir` or a local marketplace entry in `.claude/settings.json`)
+- [ ] argc;`plugins/skogai-runner/evals/`: cases that check an agent reaches for `argc send`/`wo` instead of doing the work inline, run with `argc plugin eval skogai-runner`
+- [ ] argc;workers with `--tools` run in the caller's tree. give tool-using workers a `wt` worktree (`wo run --worktree`), see projects/orchestration delegate
+- [ ] argc;`wo` results are untyped files beside the workorder. decide if workorder becomes a dash type (dash TODO: task -> workorder)
+- [ ] argc;fold `mise run dash:check` into `argc` or keep mise for tasks and argc for agent io. pick one runner
+- [ ] argc;config.toml lacks `argc` and `yq` (and `shellcheck` for `argc check`)
+- [ ] argc;`ARGC_DOCS` defaults to `~/.local/src/argc/docs`, missing for claude. add an `argc-docs` task like `claude-docs`
+- [ ] argc;argc only finds an Argcfile up the tree. place it (e.g. dotfile `~/Argcfile.sh`) and resolve `PLUGINS`/`SCHEMAS` from the script's real path, not `$PWD`
+- [ ] argc;argc cds to the Argcfile dir, so `-f <file>` resolves against it, not the caller. resolve against `$ARGC_PWD`
+- [ ] argc;no `.gitignore` here: `.skogai/logs/` (or wherever logs land) must be ignored
+- [ ] argc;workorders and logs paths are `$ROOT/.skogai/...`, pick where they go
