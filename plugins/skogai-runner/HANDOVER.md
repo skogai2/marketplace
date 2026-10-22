@@ -8,7 +8,8 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 ## what it is
 
-- `scripts/main.sh`: template for the main runner `~/Argcfile.sh`. `argc register <file> <name>` links an argc script into `~/.config/argc/commands/` and `sync` regenerates the main file with one forwarding recipe per script (`argc <name> ...`), delegating help and completion to the script itself. any argc script can be registered: `argc config` (dash-skogai's `skogai-config`) is one.
+- `scripts/main.sh`: template for the main runner `~/Argcfile.sh`. `argc register <file> <name>` links an argc script into `~/.config/argc/commands/` and `sync` regenerates the main file with one forwarding recipe per script (`argc <name> ...`), delegating help and completion to the script itself. any argc script can be registered: `argc skogai` (the core module) is one.
+- `bin/skogai` and `modules/`: the module standard. a module is a dir with a `module.md` (command, tools, requires, files, config defaults); `core` (`modules/core/`) holds config and `skogai module ls|show|add|diff|new`. read `modules/core/module.md`.
 - `scripts/runner.sh`, `argc runner`: the core recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
 - `scripts/marketplace.sh`, `argc marketplace`: plugin recipes for this marketplace (`new`, `check`, `json`, `evals`, `improve`). it used to be the repo root `Argcfile.sh`; the repo has none now, so `~/Argcfile.sh` applies inside it too.
 - skill `argc` (how to use and extend all of it), schemas in `schemas/`, the argc docs in `docs/`.

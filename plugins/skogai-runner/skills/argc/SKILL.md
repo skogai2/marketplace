@@ -1,6 +1,6 @@
 ---
 name: argc
-description: Use the skogai command runner (`argc`: `argc runner`, `argc marketplace`, `argc config` and other registered scripts) to hand typed work to other agents, run workorders, manage marketplace plugins, and extend the runner. Use when delegating a bounded question or an edit, when a recipe is missing, or when asked to add or change an argc script.
+description: Use the skogai command runner (`argc`: `argc runner`, `argc marketplace`, `argc skogai`, the `skogai` modules and other registered scripts) to hand typed work to other agents, run workorders, manage marketplace plugins, and extend the runner. Use when delegating a bounded question or an edit, when a recipe is missing, or when asked to add or change an argc script.
 allowed-tools: Bash(argc runner *), Bash(argc ls), Bash(argc --argc-run ${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh *)
 ---
 
@@ -13,6 +13,7 @@ one `argc` for everything. `~/Argcfile.sh` is the main runner: every registered 
 | `${CLAUDE_PLUGIN_ROOT}/scripts/main.sh` | the main runner itself | `register`, `unregister`, `ls`, `sync` |
 | `${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh` | `argc runner` | typed agent io: `send`, `improve`, `wo`, `journal`, `check` |
 | `${CLAUDE_PLUGIN_ROOT}/scripts/marketplace.sh` | `argc marketplace` | skogai-marketplace plugins: `new`, `check`, `json`, `evals`, `improve` |
+| `${CLAUDE_PLUGIN_ROOT}/modules/core/argc.sh` | `argc skogai`, or `skogai` from the plugin's `bin/` | core module: `config get/set/list/env/files`, `module ls/show/add/diff/new`. see `modules/core/module.md` |
 
 without the main runner (outside `~`, or not installed), run a script directly: `argc --argc-run ${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh <cmd>`. a repo with its own `Argcfile.sh` shadows `~/Argcfile.sh` inside it.
 

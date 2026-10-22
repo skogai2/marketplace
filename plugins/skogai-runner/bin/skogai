@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# skogai <module> <cmd>...: run a module's argc command; anything else goes to core
+set -euo pipefail
+
+root="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.." && pwd)"
+export SKOGAI_MODULE_PATH="${SKOGAI_MODULE_PATH:+$SKOGAI_MODULE_PATH:}$root/modules"
+core="$root/modules/core/argc.sh"
+
+case "${1:-}" in
+"" | -* | config | module | help) ;;
+*)
+    if cmd="$(argc --argc-run "$core" module command "$1" 2>/dev/null)"; then
+        shift
+        exec argc --argc-run "$cmd" "$@"
+    fi
+    ;;
+esac
+exec argc --argc-run "$core" "$@"

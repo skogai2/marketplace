@@ -90,7 +90,7 @@ _choice_delegate() {
 
 _choice_command() {
     local f
-    for f in "$COMMANDS"/*.sh; do [[ -e "$f" ]] && basename "$f" .sh; done
+    for f in "$COMMANDS"/*.sh; do [[ -e "$f" || -L "$f" ]] && basename "$f" .sh; done
 }
 
 eval "$(argc --argc-eval "$0" "$@")"
