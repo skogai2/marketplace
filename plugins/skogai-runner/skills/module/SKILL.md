@@ -7,7 +7,7 @@ allowed-tools: Bash(skogai module ls), Bash(skogai module show *), Bash(skogai m
 # skogai modules
 
 `skogai` (on `PATH` from this plugin's `bin/`) runs modules: `skogai <name> ...`
-is a module's command, `skogai config` and `skogai module` are core's. the
+is a module's command, `skogai config` and `skogai module` are core's. argc is the engine, `skogai` the runner. the
 spec is `${CLAUDE_PLUGIN_ROOT}/docs/module.md`; read it before creating or
 changing a module. `modules/memory` is the worked example.
 
@@ -16,6 +16,7 @@ changing a module. `modules/memory` is the worked example.
 - `skogai module ls`: what exists and where; `skogai module show <name>`: its manifest and what it is missing.
 - `skogai <name> --help` is the source of truth for a module's recipes.
 - `skogai config get <name>.<key> --show-origin`: a setting and the layer it came from.
+- a shell gets `skogai` from `skogai module build`: it prints the `PATH`, `MANPATH` and `ARGC_COMPLETIONS_PATH` lines; give them to the user, don't write them into their shell config.
 - installing is an offer: `skogai module add <name>` prints the plan and exits `1`; only `--apply` copies. never overwrite a `keep` file; show `skogai module diff <name>` instead.
 
 ## creating

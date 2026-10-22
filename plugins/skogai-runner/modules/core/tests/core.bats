@@ -167,3 +167,39 @@ SH
     assert_output_has "SKOGAI_LOCAL_DIR=$LOCAL"
     assert_output_has "SKOGAI_ENVY_SOMEKEY=v"
 }
+
+@test "module build: the built skogai lists, runs and completes every module" {
+    run skogai module build --shell bash
+    assert_status 0
+    B="$LOCAL/tmp/skogai"
+    assert_output_has "export PATH=$B/bin:"
+    assert_file "$B/bin/skogai"
+    assert_file "$B/completions/skogai.sh"
+    assert_file "$B/completions/skogai.fish"
+    assert_file "$B/man/man1/skogai.1"
+    assert_file "$B/man/man1/skogai-module-build.1"
+    run "$B/bin/skogai" --help
+    assert_output_has "  config "
+    assert_output_has "  memory "
+    run "$B/bin/skogai" config get core.module.install
+    assert_output_has local
+    run env ARGC_COMPLETIONS_PATH="$B/completions" argc --argc-compgen generic "" skogai memory ""
+    assert_output_has stale
+    run env ARGC_COMPLETIONS_PATH="$B/completions" argc --argc-compgen generic "" skogai config get ""
+    assert_output_has core.module.install
+}
+
+@test "module build: a module added after the build still runs" {
+    skogai module build >/dev/null 2>&1
+    skogai module new late "came later" >/dev/null 2>&1
+    run "$LOCAL/tmp/skogai/bin/skogai" late hello you
+    assert_status 0
+    assert_output_has "hello, you"
+}
+
+@test "module build: --shell fish prints fish lines, --to global builds there" {
+    run skogai module build --to global --shell fish
+    assert_status 0
+    assert_output_has "fish_add_path --prepend $SKOGAI_CONFIG_DIR/tmp/skogai/bin"
+    assert_file "$SKOGAI_CONFIG_DIR/tmp/skogai/bin/skogai"
+}

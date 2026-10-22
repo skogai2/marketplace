@@ -28,7 +28,7 @@ PATH="$(dirname "$SKOGAI_BIN"):$PATH"
 skogai() { "$SKOGAI_BIN" "$@"; }
 
 # the source dir of the module under test, or of $1
-module_dir() { skogai module show "${1:-$SKOGAI_TEST_MODULE}" | head -1 | cut -f2; }
+module_dir() { skogai module show "${1:-$SKOGAI_TEST_MODULE}" | awk -F"\t" "NR == 1 { print \$2 }"; }
 
 # a manifest field of the module under test, empty if missing
 module_field() { yq --front-matter=extract "$1 // \"\"" "$(module_dir)/module.md"; }

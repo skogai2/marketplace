@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -47,7 +47,7 @@
     {
       "name": "skogai-runner",
       "source": "./plugins/skogai-runner",
-      "description": "skogai modules: argc commands packaged with their files and config, run as `skogai <module>`, plus typed agent io"
+      "description": "skogai modules: argc commands packaged with their files and config, run as `skogai <module>`; core, memory and runner (typed agent io)"
     }
   ]
 }

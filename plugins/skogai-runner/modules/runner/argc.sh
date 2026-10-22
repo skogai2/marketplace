@@ -1,24 +1,21 @@
 #!/usr/bin/env bash
-# @describe skogai command runner: typed io for handing work to agents
+# @describe typed io for handing work to agents: prompt + files -> json matching a schema
 #
-# every agent call is `prompt + files -> json matching a schema`.
 # pure by default: only `--apply` changes existing files, scaffolds only create new ones.
-# run it from anywhere: `argc --argc-run <plugin>/scripts/runner.sh <cmd>`.
-# file arguments are relative to the current directory, state lives in
-# `.skogai/` at the root of the current git repo.
+# file arguments are relative to the current directory; workorders, the journal
+# and logs live in the local .skogai.
 # @meta require-tools jq,yq,git,claude
-# @meta binname argc
-# @env SKOGAI_MODEL=sonnet                         default model for agent calls
-# @env ARGC_DOCS                                   argc docs handed to `improve`, default the plugin's docs/argc/
+# @meta binname skogai runner
 
-# shellcheck disable=SC2154 # argc_* are assigned by --argc-eval
+# shellcheck disable=SC2154 # argc_* are assigned by --argc-eval, SKOGAI_* by `skogai module env`
 set -euo pipefail
 
-PLUGIN_ROOT="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.." && pwd)"
-SCHEMAS="$PLUGIN_ROOT/schemas"
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-WORKORDERS="$ROOT/.skogai/workorders"
-LOGS="$ROOT/.skogai/logs/argc"
+: "${SKOGAI_MODULE_DIR:?run me as \`skogai runner\`}"
+SCHEMAS="$SKOGAI_MODULE_DIR/schemas"
+ROOT="$(dirname "$SKOGAI_LOCAL_DIR")"
+WORKORDERS="$SKOGAI_LOCAL_DIR/workorders"
+LOGS="$SKOGAI_LOCAL_DIR/logs/runner"
+JOURNAL="$SKOGAI_LOCAL_DIR/$SKOGAI_RUNNER_JOURNAL"
 
 # @cmd send a prompt and files to an agent, print its typed output
 #
@@ -28,7 +25,7 @@ LOGS="$ROOT/.skogai/logs/argc"
 # @option -p --prompt                  prompt text, read from stdin if omitted
 # @option -f --file* <FILE>            file to inline
 # @option -s --schema[?`_choice_schema`] schema name or path for the output
-# @option -m --model                   model, defaults to $SKOGAI_MODEL
+# @option -m --model                   model, default runner.model
 # @option -t --tools                   tools the agent may use, none if omitted
 # @option -a --allow*                  allowed tool patterns, e.g. "Bash(git log *)"
 # @option    --plugin-dir* <DIR>       plugin to load into the agent
@@ -37,26 +34,27 @@ LOGS="$ROOT/.skogai/logs/argc"
 send() {
     local prompt="${argc_prompt:-$(cat)}"
     _compose "$prompt" "${argc_file[@]}" |
-        _agent "${argc_schema:-}" "${argc_model:-$SKOGAI_MODEL}" "${argc_tools:-}" "${argc_raw:-}"
+        _agent "${argc_schema:-}" "${argc_model:-$SKOGAI_RUNNER_MODEL}" "${argc_tools:-}" "${argc_raw:-}"
 }
 
 # @cmd ask an agent to edit files, print the patch. pure unless --apply
 #
 # the agent returns whole files (schema `edit`), the patch is derived
 # here with `diff -u`, so a bad hunk header can never break it.
-# @arg request~                        what to change
-# @option -f --file* <FILE>            files to hand over, default this script and the runner skill
-# @option -m --model                   model, defaults to $SKOGAI_MODEL
+# @arg request~                        what to change; options go before it, everything after is the request
+# @option -f --file* <FILE>            files to hand over, default this module's argc.sh and module.md
+# @option -m --model                   model, default runner.model
 # @flag      --apply                   apply the patch to the tree
 # @alias i
 improve() {
     local files=("${argc_file[@]}")
-    [[ ${#files[@]} -gt 0 ]] || mapfile -t files < <(realpath --relative-to=. "$PLUGIN_ROOT/scripts/runner.sh" "$PLUGIN_ROOT/skills/argc/SKILL.md")
-    local docs="${ARGC_DOCS:-$PLUGIN_ROOT/docs/argc}"
-    docs="${docs/#\~/$HOME}"
-    local ctx=()
-    [[ -f "$docs/specification.md" ]] && ctx+=("$docs/specification.md")
-    [[ -f "$docs/command-runner.md" ]] && ctx+=("$docs/command-runner.md")
+    [[ ${#files[@]} -gt 0 ]] || mapfile -t files < <(realpath --relative-to=. "$SKOGAI_MODULE_DIR/argc.sh" "$SKOGAI_MODULE_DIR/module.md")
+    # the argc spec, so a worker editing an argc script knows the annotations
+    local core ctx=() f
+    core="$(dirname "$(skogai module command core)")"
+    for f in specification command-runner; do
+        [[ ! -f $core/docs/argc/$f.md ]] || ctx+=("$core/docs/argc/$f.md")
+    done
 
     local prompt
     prompt="$(printf '%s\n\n%s\n%s\n' "${argc_request[*]}" \
@@ -64,7 +62,7 @@ improve() {
         "only these files may change: ${files[*]}")"
 
     local out patch
-    out="$(_compose "$prompt" "${files[@]}" "${ctx[@]}" | _agent edit "${argc_model:-$SKOGAI_MODEL}" "" "")"
+    out="$(_compose "$prompt" "${files[@]}" "${ctx[@]}" | _agent edit "${argc_model:-$SKOGAI_RUNNER_MODEL}" "" "")"
     patch="$(_edit_to_patch "$out" "${files[@]}")"
     jq -r '.summary' <<<"$out" >&2
     if [[ -z "$patch" ]]; then
@@ -114,7 +112,7 @@ wo::new() {
 
 # @cmd run a workorder, write <name>.result.json beside it
 # @arg workorder![`_choice_workorder`] name or path
-# @option -m --model                   model, defaults to the workorder's or $SKOGAI_MODEL
+# @option -m --model                   model, default the workorder's or runner.model
 wo::run() {
     local path
     path="$(_workorder_path "$argc_workorder")"
@@ -126,7 +124,7 @@ wo::run() {
     while IFS= read -r f; do [[ -n "$f" ]] && files+=("$f"); done < <(jq -r '.files // [] | .[]' <<<"$fm")
     local schema model tools
     schema="$(jq -r '.schema // "answer"' <<<"$fm")"
-    model="${argc_model:-$(jq -r --arg d "$SKOGAI_MODEL" '.model // $d' <<<"$fm")}"
+    model="${argc_model:-$(jq -r --arg d "$SKOGAI_RUNNER_MODEL" '.model // $d' <<<"$fm")}"
     tools="$(jq -r '.tools // ""' <<<"$fm")"
 
     local result="${path%.md}.result.json" body
@@ -146,15 +144,15 @@ wo::ls() {
     done
 }
 
-# @cmd session journals (.skogai/journal.md): read them back, harvest them
+# @cmd session journals (runner.journal in .skogai): read them back, harvest them
 journal() { :; }
 
 # @cmd only the user's input, one json row per turn
-# @arg file[?`_choice_journal`]         journal, default .skogai/journal.md
+# @arg file[?`_choice_journal`]         journal, default runner.journal
 # @option --last <N>                   only the last N turns
 # @flag   --md                         markdown instead of json rows
 journal::prompts() {
-    local file="${argc_file:-$ROOT/.skogai/journal.md}"
+    local file="${argc_file:-$JOURNAL}"
     local rows
     rows="$(_journal_slice "$file" "${argc_last:-0}" | awk '
         function flush() { if (turn != "") printf "%s\037%s\037%s\036", ts, turn, prompt; prompt = "" }
@@ -175,12 +173,12 @@ journal::prompts() {
 #
 # the journal is cut into chunks of --turns turns, each chunk goes to one
 # worker with schema `harvest`. stdout is one json array of every item.
-# @arg file[?`_choice_journal`]         journal, default .skogai/journal.md
+# @arg file[?`_choice_journal`]         journal, default runner.journal
 # @option --last <N>                   only the last N turns
 # @option --turns <N>                  turns per chunk, default 20
-# @option -m --model                   model, defaults to $SKOGAI_MODEL
+# @option -m --model                   model, default runner.model
 journal::harvest() {
-    local file="${argc_file:-$ROOT/.skogai/journal.md}"
+    local file="${argc_file:-$JOURNAL}"
     local per="${argc_turns:-20}"
     local dir
     dir="$(mktemp -d)"
@@ -203,23 +201,9 @@ EOF
     local chunk
     for chunk in "$dir"/*.md; do
         echo "harvest $(basename "$chunk") ($(grep -c '^## [0-9]' "$chunk") turns)" >&2
-        _compose "$prompt" "$chunk" | _agent harvest "${argc_model:-$SKOGAI_MODEL}" "" "" >"${chunk%.md}.json"
+        _compose "$prompt" "$chunk" | _agent harvest "${argc_model:-$SKOGAI_RUNNER_MODEL}" "" "" >"${chunk%.md}.json"
     done
     jq -s '[.[].items[]]' "$dir"/*.json
-}
-
-# @cmd static checks on the runner itself: argc parse, shellcheck, schemas, plugin
-check() {
-    local self="$PLUGIN_ROOT/scripts/runner.sh"
-    argc --argc-export "$self" >/dev/null && echo "ok    argc parse"
-    if command -v shellcheck >/dev/null; then
-        shellcheck -x "$self" && echo "ok    shellcheck"
-    else
-        echo "skip  shellcheck: not installed"
-    fi
-    local s
-    for s in "$SCHEMAS"/*.json; do jq -e . "$s" >/dev/null && echo "ok    schema $(basename "$s")"; done
-    claude plugin validate "$PLUGIN_ROOT"
 }
 
 # prompt + files -> one message
@@ -284,9 +268,7 @@ _journal_slice() {
     awk -v skip=$((n > 0 && total > n ? total - n : 0)) '/^## [0-9]{4}-/ { i++ } i > skip' "$file"
 }
 
-_choice_journal() {
-    printf '%s\n' "$ROOT/.skogai/journal.md" "$HOME/skogai/.skogai/journal.md"
-}
+_choice_journal() { echo "$JOURNAL"; }
 
 _body() { awk 'NR==1 && /^---$/ {fm=1; next} fm && /^---$/ {fm=0; next} !fm' "$1"; }
 

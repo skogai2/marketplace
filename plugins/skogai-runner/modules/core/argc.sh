@@ -159,11 +159,17 @@ module::show() {
 # @cmd path of a module's argc script; exits 1 if it has none
 # @arg name![`_choice_module`]
 module::command() {
-    local dir cmd
+    local dir
     IFS=$'\t' read -r _ _ dir < <(_module "$argc_name") || exit 1
-    cmd="$(_field "$dir/module.md" .command)"
-    [[ -n $cmd && -f $dir/$cmd ]] || exit 1
-    echo "$dir/$cmd"
+    module::command_of "$dir"
+}
+
+# a module dir's argc script, or 1 if it has none
+module::command_of() {
+    local cmd
+    cmd="$(_field "$1/module.md" .command)"
+    [[ -n $cmd && -f $1/$cmd ]] || return 1
+    echo "$1/$cmd"
 }
 
 # @cmd run modules' tests with bats: core's contract, then the module's own tests/
@@ -191,6 +197,60 @@ module::test() {
             bats ${argc_filter:+--filter "$argc_filter"} "${files[@]}" || rc=1
     done
     return "$rc"
+}
+
+# @cmd build `skogai` for a shell: one argc file with every module, man pages, completions
+#
+# writes into <local|global dir>/tmp/skogai/, throwaway and rebuilt at will:
+# bin/skogai (help and completion for core and every module found from here;
+# everything runs through the bin/skogai that built it), completions/skogai.sh
+# for ARGC_COMPLETIONS_PATH, completions/skogai.{bash,zsh,fish}, man/man1.
+# prints the env lines that put it on PATH, MANPATH and ARGC_COMPLETIONS_PATH.
+# @option --to[local|global]  where to build, default core.module.install
+# @option --shell[bash|zsh|fish]  env lines for this shell, default from $SHELL
+module::build() {
+    : "${SKOGAI_BIN:?run me as skogai module build}"
+    local to out tmp name layer dir cmd shell
+    to="${argc_to:-$(_get core.module.install local)}"
+    out="$(dirname "$(_install_dir "$to")")/tmp/skogai"
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' RETURN
+    mkdir -p "$tmp/bin" "$tmp/completions" "$tmp/man/man1"
+    _main >"$tmp/bin/skogai"
+    chmod +x "$tmp/bin/skogai"
+    argc --argc-export "$tmp/bin/skogai" >/dev/null
+    cp "$tmp/bin/skogai" "$tmp/completions/skogai.sh"
+    for shell in bash zsh fish; do argc --argc-completions "$shell" skogai >"$tmp/completions/skogai.$shell"; done
+    # core and every module give their own pages; the main file only skogai.1, the list
+    argc --argc-mangen "$SELF" "$tmp/man/man1" >/dev/null
+    while IFS=$'\t' read -r name layer dir; do
+        [[ $name != core ]] || continue
+        cmd="$(module::command_of "$dir")" || continue
+        argc --argc-mangen "$cmd" "$tmp/man/man1" >/dev/null
+    done < <(_modules)
+    mkdir "$tmp/main" && argc --argc-mangen "$tmp/bin/skogai" "$tmp/main" >/dev/null && cp "$tmp/main/skogai.1" "$tmp/man/man1/"
+    rm -rf "$tmp/main"
+    for f in "$tmp/man/man1"/*' '*; do [[ -e $f ]] && mv "$f" "${f// /-}"; done
+    rm -rf "$out"
+    mkdir -p "$(dirname "$out")"
+    cp -r "$tmp" "$out"
+    echo "built $out" >&2
+    shell="${argc_shell:-$(basename "${SHELL:-bash}")}"
+    # shellcheck disable=SC2016 # lines for the user's shell, expanded there
+    case "$shell" in
+    fish)
+        printf 'fish_add_path --prepend %q\n' "$out/bin"
+        printf 'set -gx MANPATH %q $MANPATH\n' "$out/man"
+        printf 'set -gx ARGC_COMPLETIONS_PATH %q $ARGC_COMPLETIONS_PATH\n' "$out/completions"
+        printf 'source %q\n' "$out/completions/skogai.fish"
+        ;;
+    *)
+        printf 'export PATH=%q:"$PATH"\n' "$out/bin"
+        printf 'export MANPATH=%q:"$MANPATH"\n' "$out/man"
+        printf 'export ARGC_COMPLETIONS_PATH=%q:"$ARGC_COMPLETIONS_PATH"\n' "$out/completions"
+        printf 'source %q\n' "$out/completions/skogai.$shell"
+        ;;
+    esac
 }
 
 # @cmd check modules against the spec (docs/module.md), all found ones if none given
@@ -374,6 +434,35 @@ _module_files() {
             if [[ -d $dir/$f ]]; then (cd "$dir" && find "${f%/}" -type f); else echo "$f"; fi
         done < <(_field "$dir/module.md" '.files[]')
     } | grep . | sort -u
+}
+
+# the main argc file for `module build`: templates/main.sh with one forwarding
+# recipe per core group and per module with a command between its markers
+_main() {
+    local tpl name layer dir cmd desc known=config\|module\|help
+    tpl="$(dirname "$SELF")/templates/main.sh"
+    sed '/^# >>> generated$/q' "$tpl"
+    printf 'BIN=%q\nCORE=%q\ndeclare -A CMDS=()\n' "$SKOGAI_BIN" "$SELF"
+    for name in config module; do
+        desc="$(argc --argc-export "$SELF" | N="$name" yq -p json '.subcommands[] | select(.name == strenv(N)) | .describe | split("\n") | .[0]')"
+        _forward "$name" "$desc"
+    done
+    while IFS=$'\t' read -r name layer dir; do
+        [[ $name != core ]] || continue
+        cmd="$(module::command_of "$dir")" || continue
+        printf 'CMDS[%s]=%q\n' "$name" "$cmd"
+        _forward "$name" "$(_field "$dir/module.md" .description)"
+        known+="|$name"
+    done < <(_modules)
+    printf 'KNOWN=%q\n' "$known"
+    sed -n '/^# <<< generated$/,$p' "$tpl"
+}
+
+# one forwarding recipe: help and completion from the real script, the run through $BIN
+# shellcheck disable=SC2016 # generated code, expanded when it runs
+_forward() {
+    printf '\n# @cmd %s\n# @arg args~[?`_choice_forward`]\n' "$2"
+    printf '%s() { exec "$BIN" %s "${argc_args[@]}"; }\n\n' "$1" "$1"
 }
 
 # names a module can't have: `skogai <name>` would be core's

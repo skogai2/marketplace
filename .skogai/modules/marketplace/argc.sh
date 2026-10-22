@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
 # @describe skogai-marketplace: scaffold, validate, eval and improve its plugins
 #
-# works on the marketplace checkout this script lives in, from any directory.
-# register it with the main runner as `argc marketplace`.
+# works on the repo this module is installed in.
 # @meta require-tools jq,git,claude
-# @meta binname argc
-# @env SKOGAI_MARKETPLACE_REPO_DIR               marketplace checkout, default the one holding this script
+# @meta binname skogai marketplace
 
-# shellcheck disable=SC2154 # argc_* are assigned by --argc-eval
+# shellcheck disable=SC2154 # argc_* are assigned by --argc-eval, SKOGAI_* by `skogai module env`
 set -euo pipefail
 
-HERE="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-REPO="${SKOGAI_MARKETPLACE_REPO_DIR:-$(cd "$HERE/../../.." && pwd)}"
+: "${SKOGAI_MODULE_DIR:?run me as \`skogai marketplace\`}"
+REPO="$(dirname "$SKOGAI_LOCAL_DIR")"
 PLUGINS="$REPO/plugins"
-RUNNER="$HERE/runner.sh"
 
 # @cmd scaffold a plugin with one skill
 # @arg name!                           kebab-case name
@@ -50,19 +47,19 @@ evals() {
 }
 
 # @cmd hand a plugin to an agent for improvement, pure unless --apply
-# @arg name![`_choice_plugin`]
-# @arg request~                        what to change
 # @flag --apply                        apply the patch to the tree
+# @arg name![`_choice_plugin`]
+# @arg request~                        what to change; --apply goes before the name
 improve() {
-    local args=("${argc_request[*]}") f
+    local args=() f
     while IFS= read -r f; do args+=(-f "$f"); done < <(git -C "$REPO" ls-files --cached --others --exclude-standard "plugins/$argc_name")
     [[ -z "${argc_apply:-}" ]] || args+=(--apply)
-    (cd "$REPO" && argc --argc-run "$RUNNER" improve "${args[@]}")
+    (cd "$REPO" && skogai runner improve "${args[@]}" "${argc_request[*]}")
 }
 
 _choice_plugin() {
     local d
-    for d in "$PLUGINS"/*/.claude-plugin; do basename "$(dirname "$d")"; done
+    for d in "$PLUGINS"/*/.claude-plugin; do [[ -d $d ]] && basename "$(dirname "$d")"; done
 }
 
 eval "$(argc --argc-eval "$0" "$@")"

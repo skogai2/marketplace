@@ -31,6 +31,7 @@ skogai-runner plugin.
 | `module diff <name>` | an installed copy against its source |
 | `module new <name> <description> [--to]` | scaffold from `templates/module/` |
 | `module test [name]... [--filter]` | contract tests for each module, then its own `tests/` (bats) |
+| `module build [--to] [--shell]` | generate `skogai` for a shell: one argc file over every module, man pages, completions |
 | `module env <name>` | the env a module's command runs with |
 | `module command <name>` | the path of a module's argc script |
 
@@ -39,6 +40,9 @@ skogai-runner plugin.
 | key | default | |
 |---|---|---|
 | `core.module.install` | `local` | where `module add` and `module new` put a module without `--to`: `local` or `global` |
+
+`templates/main.sh` is what `module build` fills in. `docs/argc/` is the argc
+reference every module's command is written against.
 
 `templates/module/` is what `module new` scaffolds (`_name_` in a path becomes
 the module's name); edit an installed copy to change it for one repo.

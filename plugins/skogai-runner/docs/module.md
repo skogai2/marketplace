@@ -107,6 +107,25 @@ a module's keys live under its name. the layers, later wins:
 module's `module.local.md`; `skogai config get <key> --show-origin` says which
 layer won.
 
+## skogai
+
+`skogai` is the runner; argc is the engine under it.
+
+- in Claude Code sessions it is this plugin's `bin/skogai`, on the Bash tool's
+  `PATH` while the plugin is enabled. it finds modules when it runs, so
+  nothing needs registering.
+- in a shell, `skogai module build` generates a static `skogai`: one argc
+  file with a forwarding recipe for core's groups and every module found
+  from there, so `--help`, completion and man pages cover all of them. every
+  run still goes through the `bin/skogai` that built it, and a module found
+  after the build runs too, only without help and completion. the build is
+  throwaway, in `.skogai/tmp/skogai/` (or the global dir's): `bin/`,
+  `man/man1/`, `completions/skogai.sh` for `ARGC_COMPLETIONS_PATH`, and
+  `completions/skogai.{bash,zsh,fish}`. it prints the env lines for
+  `PATH`, `MANPATH` and `ARGC_COMPLETIONS_PATH`; putting them in a shell, a
+  `.envrc` or mise is up to the user. the first build runs the checkout's
+  `bin/skogai` by path.
+
 ## the command
 
 an argc script. `skogai <name> <args>` runs it with `argc --argc-run` from the
@@ -124,8 +143,10 @@ rules:
 
 - read paths and config from that env, never from `$PWD` or its own location.
   start with `: "${SKOGAI_MODULE_DIR:?run me as \`skogai <name>\`}"`.
-- `# @meta binname skogai <name>` so help reads right; `# @meta require-tools`
-  matches `tools:`.
+- `# @meta binname skogai <name>` so help and man pages read right;
+  `# @meta require-tools` matches `tools:`.
+- a positional `~` argument takes everything after it, flags included: put
+  options before it.
 - exit `0` ok, `1` a finding or an unapplied change (like `diff`), `2` usage.
 - pure by default: a recipe that changes an existing file takes `--apply` and
   without it prints what it would do. creating a new file is fine; overwriting
@@ -163,7 +184,7 @@ not by writing layer files.
    (`--to global` for `~/.config/skogai/modules/`).
 2. fill in `module.md`: `tools`, `files`, `config` defaults, and a body that
    explains every key.
-3. write the recipes in `argc.sh` (argc spec: `docs/argc/specification.md`).
+3. write the recipes in `argc.sh` (argc spec: core's `docs/argc/specification.md`).
 4. write its tests, then `skogai module test <name>`: the contract and its
    own tests pass.
 5. to ship it with a plugin, move the directory to the plugin's `modules/`.

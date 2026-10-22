@@ -1,22 +1,14 @@
-- [ ] argc;load `plugins/skogai-runner` in sessions (`--plugin-dir` or a local marketplace entry in `.claude/settings.json`)
-- [ ] argc;`plugins/skogai-runner/evals/`: cases that check an agent reaches for `argc send`/`wo` instead of doing the work inline, run with `argc marketplace evals skogai-runner`
-- [ ] argc;workers with `--tools` run in the caller's tree. give tool-using workers a `wt` worktree (`wo run --worktree`), see projects/orchestration delegate
-- [ ] argc;`wo` results are untyped files beside the workorder. decide if workorder becomes a dash type (dash TODO: task -> workorder)
-- [ ] argc;fold `mise run dash:check` into `argc` or keep mise for tasks and argc for agent io. pick one runner
-- [x] argc;config.toml lacks `argc` and `yq` (and `shellcheck` for `argc check`)
-- [x] argc;`ARGC_DOCS` defaults to the plugin's `docs/argc/`
-- [x] argc;the core is `scripts/runner.sh`, schemas and docs resolve from its real path. `scripts/main.sh` builds a main `~/Argcfile.sh` from registered command files
-- [x] argc;`-f <file>` resolves against the caller's directory
-- [x] argc;no `.gitignore` here: `.skogai/logs/` (or wherever logs land) must be ignored
-- [x] argc;workorders, journal and logs live in `.skogai/` at the caller's git root
-- [x] argc;main runner installed: `runner`, `marketplace`, `config`, `old-example` registered
-- [ ] argc;`marketplace.sh` came over as-is from the root `Argcfile.sh`: rework it for the main runner (e.g. fold in `scripts/` and the pre-commit checks)
-- [ ] argc;port what is still useful from `old-example` (`~/old/old-core/Argcfile.sh`: repo, queue, marketplace, tools) into registered scripts
-- [ ] module;port `scripts/runner.sh` to `modules/runner/` (schemas as `files:`), then retire `scripts/main.sh` and `~/Argcfile.sh` in favour of `bin/skogai`
-- [ ] module;`scripts/marketplace.sh` out of this plugin: a module in the marketplace repo's `.skogai/modules/`
+- [ ] runner;`evals/`: cases that check an agent reaches for `skogai runner send`/`wo` instead of doing the work inline, run with `skogai marketplace evals skogai-runner`
+- [ ] runner;workers with `--tools` run in the caller's tree. give tool-using workers a `wt` worktree (`wo run --worktree`), see projects/orchestration delegate
+- [ ] runner;`wo` results are untyped files beside the workorder. decide if workorder becomes a dash type (dash TODO: task -> workorder)
+- [ ] runner;fold `mise run dash:check` into `skogai` or keep mise for tasks and skogai for agent io. pick one runner
+- [ ] runner;port what is still useful from old-core (`~/old/old-core/Argcfile.sh`: repo, queue, tools) into modules
+- [ ] marketplace;fold `scripts/` and the pre-commit checks into the marketplace module
 - [ ] module;plugins other than skogai-runner shipping `modules/`: how they get onto `SKOGAI_MODULE_PATH`
 - [ ] module;`module update`: pull source changes into an installed copy, `keep` respected
+- [ ] module;run `skogai module test` in the `marketplace` workflow and pre-commit (CI needs bats, argc, yq)
 - [ ] module;top-level `bin/` blocks claude.ai organization sync of this plugin (docs/plugins/components.md)
+- [ ] module;`~/.local/src/argc-completions/completions/skogai.sh` is generated from the gone dash-skogai CLI and shadows `skogai` completion
 - [ ] module;`~/skogai/.skogai/config` is a directory, the local config layer is a file at that path
 - [ ] module;`~/skogai` memory `dotfiles-via-mise-tools` has no `stale_after`
-- [ ] module;run `skogai module test` in the `marketplace` workflow and pre-commit (CI needs bats, argc, yq)
+- [ ] module;`plugins/skogai-core/CONFIG.md` describes `~/skogai/dash-skogai/bin/skogai`, which no longer exists
