@@ -10,6 +10,7 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 - `scripts/runner.sh`: the core recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
 - skill `argc` (how to use and extend the runner), schemas in `schemas/`, the argc docs in `docs/`.
+- `scripts/main.sh`: template for a main `~/Argcfile.sh`. `argc register <file> <name>` links an argc script into `~/.config/argc/commands/` and `sync` regenerates the main file with one forwarding recipe per command (`argc <name> ...`), delegating help and completion to the script itself.
 - the marketplace root `Argcfile.sh` forwards `send`/`improve`/`wo`/`journal` to the core and keeps the `plugin` recipes.
 - `.skogai/workorders/smoke-test.*`: a worked example, a workorder and its typed result.
 - `TODO.md`: what's needed before it runs here.

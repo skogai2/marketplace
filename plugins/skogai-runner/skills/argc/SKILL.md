@@ -12,7 +12,7 @@ the runner is `${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh`, run from any directory:
 argc --argc-run ${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh <cmd>
 ```
 
-file arguments are relative to the current directory; workorders, journal and logs live in `.skogai/` at the root of the current git repo (the current directory outside one). a repo can forward recipes from its own `Argcfile.sh`, then `argc <cmd>` works from anywhere in it; the recipes below are written that way. `argc <cmd> --help` is the source of truth; this skill only says how to use them.
+file arguments are relative to the current directory; workorders, journal and logs live in `.skogai/` at the root of the current git repo (the current directory outside one). a repo can forward recipes from its own `Argcfile.sh`, then `argc <cmd>` works from anywhere in it; the recipes below are written that way. when the main runner is installed (`scripts/main.sh`, `~/Argcfile.sh`), `argc runner <cmd>` works anywhere under `~` without a repo `Argcfile.sh`; `argc ls` lists what is registered. `argc <cmd> --help` is the source of truth; this skill only says how to use them.
 
 ## the contract
 

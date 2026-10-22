@@ -9,7 +9,8 @@
 # shellcheck disable=SC2154 # argc_* are assigned by --argc-eval
 set -euo pipefail
 
-PLUGINS="$PWD/plugins"
+HERE="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+PLUGINS="$HERE/plugins"
 CORE="$PLUGINS/skogai-runner/scripts/runner.sh"
 
 # @cmd send a prompt and files to an agent, print its typed output
@@ -73,9 +74,9 @@ plugin::eval() {
 # @flag --apply                        apply the patch to the tree
 plugin::improve() {
     local args=("${argc_request[*]}") f
-    while IFS= read -r f; do args+=(-f "$f"); done < <(git ls-files --cached --others --exclude-standard "plugins/$argc_name")
+    while IFS= read -r f; do args+=(-f "$f"); done < <(git -C "$HERE" ls-files --cached --others --exclude-standard "plugins/$argc_name")
     [[ -z "${argc_apply:-}" ]] || args+=(--apply)
-    argc --argc-run "$CORE" improve "${args[@]}"
+    (cd "$HERE" && argc --argc-run "$CORE" improve "${args[@]}")
 }
 
 # core recipe, run from the caller's directory

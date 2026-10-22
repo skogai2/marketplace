@@ -5,7 +5,8 @@
 - [ ] argc;fold `mise run dash:check` into `argc` or keep mise for tasks and argc for agent io. pick one runner
 - [x] argc;config.toml lacks `argc` and `yq` (and `shellcheck` for `argc check`)
 - [x] argc;`ARGC_DOCS` defaults to the plugin's `docs/`
-- [x] argc;the core is `scripts/runner.sh`, schemas and docs resolve from its real path. still open: a short way to call it outside a repo with an `Argcfile.sh` that forwards to it (alias, or a dotfile `~/Argcfile.sh`)
+- [x] argc;the core is `scripts/runner.sh`, schemas and docs resolve from its real path. `scripts/main.sh` builds a main `~/Argcfile.sh` from registered command files
 - [x] argc;`-f <file>` resolves against the caller's directory
 - [x] argc;no `.gitignore` here: `.skogai/logs/` (or wherever logs land) must be ignored
 - [x] argc;workorders, journal and logs live in `.skogai/` at the caller's git root
+- [ ] argc;install the main runner: `argc --argc-run plugins/skogai-runner/scripts/main.sh register plugins/skogai-runner/scripts/runner.sh runner` (writes `~/Argcfile.sh`, `~/.config/argc/commands/`), and register the marketplace `Argcfile.sh`
