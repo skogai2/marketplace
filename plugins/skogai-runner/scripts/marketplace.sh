@@ -1,49 +1,24 @@
 #!/usr/bin/env bash
-# @describe skogai-marketplace runner: the skogai-runner core plus recipes for plugins/
+# @describe skogai-marketplace: scaffold, validate, eval and improve its plugins
 #
-# send, improve, wo and journal forward to plugins/skogai-runner/scripts/runner.sh,
-# run from the directory argc was called in. `argc <cmd> --help` shows the core's help.
+# works on the marketplace checkout this script lives in, from any directory.
+# register it with the main runner as `argc marketplace`.
 # @meta require-tools jq,git,claude
-# @meta dotenv
 # @meta binname argc
+# @env SKOGAI_MARKETPLACE_REPO_DIR               marketplace checkout, default the one holding this script
+
 # shellcheck disable=SC2154 # argc_* are assigned by --argc-eval
 set -euo pipefail
 
 HERE="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-PLUGINS="$HERE/plugins"
-CORE="$PLUGINS/skogai-runner/scripts/runner.sh"
-
-# @cmd send a prompt and files to an agent, print its typed output
-# @arg args~
-# @alias s
-send() { _core send "${argc_args[@]}"; }
-
-# @cmd ask an agent to edit files, print the patch. pure unless --apply
-# @arg args~
-# @alias i
-improve() { _core improve "${argc_args[@]}"; }
-
-# @cmd workorders: new, run, ls
-# @arg args~
-wo() { _core wo "${argc_args[@]}"; }
-
-# @cmd session journals: prompts, harvest
-# @arg args~
-journal() { _core journal "${argc_args[@]}"; }
-
-# @cmd the runner's own checks, then every plugin
-check() {
-    _core check
-    plugin::check
-}
-
-# @cmd claude code plugins under plugins/
-plugin() { :; }
+REPO="${SKOGAI_MARKETPLACE_REPO_DIR:-$(cd "$HERE/../../.." && pwd)}"
+PLUGINS="$REPO/plugins"
+RUNNER="$HERE/runner.sh"
 
 # @cmd scaffold a plugin with one skill
 # @arg name!                           kebab-case name
 # @arg description!                    one line: what it is for
-plugin::new() {
+new() {
     local dir="$PLUGINS/$argc_name"
     [[ ! -e "$dir" ]] || { echo "exists: $dir" >&2; return 2; }
     mkdir -p "$dir/.claude-plugin" "$dir/skills/$argc_name"
@@ -54,17 +29,23 @@ plugin::new() {
     echo "$dir"
 }
 
-# @cmd validate plugins, all if no name is given
+# @cmd validate plugins, all if no name is given, then check marketplace.json is generated
 # @arg name*[`_choice_plugin`]
-plugin::check() {
+check() {
     local names=("${argc_name[@]}") n
     [[ ${#names[@]} -gt 0 ]] || mapfile -t names < <(_choice_plugin)
     for n in "${names[@]}"; do claude plugin validate "$PLUGINS/$n"; done
+    "$REPO/scripts/generate-marketplace-json.sh" --check
+}
+
+# @cmd regenerate .claude-plugin/marketplace.json
+json() {
+    "$REPO/scripts/generate-marketplace-json.sh"
 }
 
 # @cmd run a plugin's evals
 # @arg name![`_choice_plugin`]
-plugin::eval() {
+evals() {
     claude plugin eval "$PLUGINS/$argc_name"
 }
 
@@ -72,16 +53,11 @@ plugin::eval() {
 # @arg name![`_choice_plugin`]
 # @arg request~                        what to change
 # @flag --apply                        apply the patch to the tree
-plugin::improve() {
+improve() {
     local args=("${argc_request[*]}") f
-    while IFS= read -r f; do args+=(-f "$f"); done < <(git -C "$HERE" ls-files --cached --others --exclude-standard "plugins/$argc_name")
+    while IFS= read -r f; do args+=(-f "$f"); done < <(git -C "$REPO" ls-files --cached --others --exclude-standard "plugins/$argc_name")
     [[ -z "${argc_apply:-}" ]] || args+=(--apply)
-    (cd "$HERE" && argc --argc-run "$CORE" improve "${args[@]}")
-}
-
-# core recipe, run from the caller's directory
-_core() {
-    (cd "${ARGC_PWD:-$PWD}" && argc --argc-run "$CORE" "$@")
+    (cd "$REPO" && argc --argc-run "$RUNNER" improve "${args[@]}")
 }
 
 _choice_plugin() {

@@ -2392,3 +2392,179 @@ The core runner is now part of the `skogai-runner` plugin and works outside this
 - Bash: `cd /home/skogix/.local/src/marketplace && python3 - <<'PY'`
 - Bash: `sed -i '3a allowed-tools: Bash(argc --argc-run ${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh *)' plugins/skogai-runner/skills/…`
 
+## 2026-10-22 20:52 · turn 13280738
+
+**User**
+
+> the interesting part which we can use is this; /home/skogix/.claude/plugins/marketplaces/skogai-marketplace is the marketplace itself - this lets us use the marketplace argc-file as marketplace-wide. not sure how this would work when calling skills for example and if skills can use claude marketplace-envs etc
+
+**Assistant**
+
+Yes, running the marketplace `Argcfile.sh` from anywhere works. I ran `argc --argc-run ~/.claude/plugins/marketplaces/skogai-marketplace/Argcfile.sh wo ls` from `/tmp/argcout`. argc sets `ARGC_PWD` to the directory you called from, and the root file's `_core` switches back to it, so file paths and `.skogai/` state stay with the caller. The catch is that a skill has no variable that points at the marketplace.
+
+**What skills and hooks get** (`docs/skills.md:457`, `docs/plugins/components.md:389`):
+- **Skills:** `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PROJECT_DIR}`. They are filled in in the skill text and in `allowed-tools`.
+- **Hooks:** `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` as environment variables.
+- **The marketplace:** there is no `CLAUDE_MARKETPLACE_*` variable in the docs.
+
+**Why `${CLAUDE_PLUGIN_ROOT}/../..` doesn't reach it:** a plugin from a git marketplace is copied into `~/.claude/plugins/cache/skogai-marketplace/skogai-runner/0.2.0/`. `CLAUDE_PLUGIN_ROOT` points at that copy, not at the marketplace clone.
+
+**Two ways to reach the clone:**
+1. **Look it up in Claude Code's own record:** `jq -r '."skogai-marketplace".installLocation' ~/.claude/plugins/known_marketplaces.json`. This works anywhere the marketplace is added. A skill can fill it in at load time with a `` !`…` `` command line, and a shell alias can use the same lookup, e.g. `skogai` → `argc --argc-run "$(…)/Argcfile.sh"`.
+2. **Add the marketplace from your local checkout** (`~/.local/src/marketplace`) instead of GitHub (`docs/plugins/loading.md:180`).
+   - Plugins then load straight from the source folder, so `${CLAUDE_PLUGIN_ROOT}/../..` is the marketplace root.
+   - Edits take effect on `/reload-plugins` without version bumps.
+   - This only applies on your machine; everyone else still gets the git copy.
+
+**Caveats:**
+- Claude Code manages the clone and updates it from GitHub, so it only has what you've pushed.
+- Recipes that write files (`plugin new`, `improve --apply` on the clone's own files) would leave uncommitted changes there that can clash with updates. Treat the clone as a read-only toolbox; state already goes to the caller's `.skogai/`.
+- Hard-coding the name `skogai-marketplace` ties the runner to this marketplace. That's fine for skogai-runner but worth knowing.
+
+I'd do both: option 1 in the skill and a shell alias, so it works wherever the marketplace is installed, and option 2 on your machine so your edits show up immediately. Want me to set that up?
+
+**Actions**
+
+- Bash: `M=/home/skogix/.claude/plugins/marketplaces/skogai-marketplace; rtk ls -la $M | head; rtk git -C $M log --oneline -1; gi…`
+- Bash: `rtk grep -rn -i "MARKETPLACE[A-Z_]*}\|\${CLAUDE_MARKETPLACE\|plugins/marketplaces\|known_marketplaces" docs | head -10; …`
+- Bash: `sed -n 15,45p docs/plugins/loading.md; rtk grep -n -i "outside the plugin\|\.\./\|copied\|copies" docs/plugins/loading.m…`
+- Bash: `sed -n 66,80p docs/plugins/host-marketplace.md; grep -n -B2 -A8 "load in place\|readFromFolder" docs/plugins/cli-referen…`
+- Bash: `M=/home/skogix/.claude/plugins/marketplaces/skogai-marketplace; git -C $M status --short | head -3; cd /tmp/argcout && a…`
+- Bash: `rtk jq -r '.plugins | to_entries[] | select(.key|test("skogai")) | "\(.key) \(.value[0].installPath) \(.value[0].version…`
+
+## 2026-10-22 21:04 · turn fdcb762d
+
+**User**
+
+> now the absolute perfect solution for all this would essentially be something like "a main argc-file which loads subcommand-files" so to speak.
+>
+> think like this; "a main argc file living in home" where "runner.sh" would represent the command `argc runner` essentially if that makes sense? this way each subcommand register with the main runner on init essentially, doesnt have to be a plugin in that sense to begin with i guess. `argc --argc-export` could probably be quite helpful i presume
+
+**Assistant**
+
+I built the main runner as `plugins/skogai-runner/scripts/main.sh` and committed it. I tested it in `/tmp` only; nothing is installed in `~` yet.
+
+**How it works**
+- **Registering:** `argc register <file> <name>` links the script into `~/.config/argc/commands/<name>.sh`, then runs `sync`. `argc unregister <name>` removes it and `argc ls` lists what's registered.
+- **`sync`:** rebuilds `~/Argcfile.sh` from the template, with one recipe per registered script.
+  - Each recipe's description comes from that script's `@describe`, read with `argc --argc-export`.
+  - A script that is missing or fails to parse is skipped with a warning.
+  - The new file is parsed before it replaces the old one, so a broken script can't break `argc`.
+- **Running a command:** `argc runner wo ls` runs `runner.sh` from the directory you called it in. `argc runner wo --help` shows the script's own help.
+- **Tab completion:** passed on to the script itself via `argc --argc-compgen`, so subcommands, schema names and file paths all complete through the main file.
+- **Updating the template:** `~/Argcfile.sh` is generated output, so changes to `main.sh` take effect on the next `sync`.
+
+**Tested in `/tmp`, with the main file and registry pointed there**
+- `argc runner check` and `argc runner wo --help` from a subdirectory work.
+- Completion for subcommands, `-s` and `-f` works.
+- After registering the marketplace `Argcfile.sh` as `marketplace`, `argc marketplace wo ls` and `argc marketplace plugin --help` work.
+- Registering a name that clashes with a built-in command such as `sync` is refused.
+
+**Fixed along the way:** registering the root `Argcfile.sh` broke it. argc only switches to a script's own directory when the file is named `Argcfile.sh`, and the registry link is named `marketplace.sh`. The root file now finds `plugins/` from its own path.
+
+**Things to know before installing**
+- argc uses the nearest `Argcfile.sh` above the current directory. Inside a repo that has its own (like this marketplace), that file wins, so `argc runner` isn't available there unless the repo's file forwards it. Here the repo's `send`, `wo` and so on already do the same job.
+- Registered scripts are links, so `runner` should point at your local checkout, not the plugin cache, whose path changes with every version.
+- Plugins could register themselves from a session-start hook, but that conflicts with your "offer, don't install" rule, so for now registration is something you run yourself.
+
+**Installing** writes `~/Argcfile.sh` and `~/.config/argc/commands/`:
+```
+argc --argc-run plugins/skogai-runner/scripts/main.sh register plugins/skogai-runner/scripts/runner.sh runner
+argc register ~/.local/src/marketplace/Argcfile.sh marketplace
+```
+Should I run those?
+
+**Actions**
+
+- Bash: `cd plugins/skogai-runner/docs && rtk read argc-macros.md; rtk grep -n -i -B2 -A12 "compgen\|delegat\|_argc_\|ARGC_COMPGE…`
+- Bash: `R=/home/skogix/.local/src/marketplace/plugins/skogai-runner/scripts/runner.sh; argc --argc-compgen generic $R runner "" …`
+- Bash: `sed -n 1,91p variables.md | rtk grep -n -A2 "ARGC_\|argc__"`
+- Bash: `mkdir -p /tmp/home/sub && cd /tmp/home && cat > Argcfile.sh <<'EOF'`
+- Write `plugins/skogai-runner/scripts/main.sh`
+- Bash: `python3 - <<'PY'`
+- Bash: `R=plugins/skogai-runner/scripts/runner.sh; argc --argc-compgen generic $R runner send -f "" | head -2 | cat -A | head -2…`
+- Bash: `cd /tmp/home/sub && touch afile && argc --argc-compgen bash /home/skogix/.local/src/marketplace/plugins/skogai-runner/sc…`
+- Bash: `sed -i "s#\$1 ~ /^__argc_/ { print \$1; next }#\$1 ~ /^__argc_value=/ { print tolower(\$1); next } \$1 ~ /^__argc_/ { pr…`
+- Bash: `export ARGC_MAIN=/tmp/home/Argcfile.sh ARGC_COMMANDS=/tmp/home/commands; cd /tmp/home/sub && argc runner check 2>&1 | rt…`
+- Bash: `python3 - <<'PY'`
+- Bash: `cd /home/skogix/.local/src/marketplace && python3 - <<'PY'`
+
+## 2026-10-22 21:33 · turn e401bba6
+
+**User**
+
+> omg it actually works! if you had any idea how long i have been working on something similar! try `argc config` for a example of how "adding a config module" lets us all of a sudden manage settings as a added bonus of sorts. and old-example being the version before this one  :)
+
+**Assistant**
+
+Fixed and committed (`73446cf`). `argc --help` now lists `old-example` by its name, and `argc sync` rebuilt `~/Argcfile.sh`. One quirk: because `sync` runs the copy already inside `~/Argcfile.sh`, a template change only takes effect on the second `sync`.
+
+The config module shows the payoff well. It is registered once and then works in every directory: `argc config files` from `~/skogai` and from the marketplace both use the same base and global layers, and the local layer follows the directory you're in. Any setting stored in those layers becomes available everywhere just by registering the module.
+
+One thing I noticed: the marketplace root `Argcfile.sh` is deleted in your working tree. That deletion is your uncommitted change, and I haven't touched it. It's why `argc config` works inside the marketplace now, since there's no repo file taking priority over `~/Argcfile.sh`. But it also took away:
+- the `plugin new/check/eval/improve` recipes;
+- the `marketplace` registration, which now points at a missing file (`sync` skips it with a warning);
+- the mentions of that file in `SKILL.md` and `HANDOVER.md`.
+
+If removing it was intentional, I'd move the `plugin` recipes into `plugins/skogai-runner/scripts/marketplace.sh`, register it as `argc marketplace`, and update the docs. Want that?
+
+**Actions**
+
+- Bash: `cd ~ && rtk ls -la ~/Argcfile.sh ~/.config/argc/commands/ 2>&1; argc --help 2>&1 | head -30; echo ---; argc config --hel…`
+- Bash: `cd ~ && argc config files 2>&1 | head; echo ---; argc config list 2>&1 | head -15; echo ---; argc old-example --help 2>&…`
+- Bash: `sed -i "s#jq -r '.describe | split(\"\\\\n\")\[0\]'#jq -r '(.describe // \"\") | split(\"\\\\n\")[0] // \"\"'#" plugins/…` (failed)
+- Bash: `rtk grep -n "^TEMPLATE=\|split" ~/Argcfile.sh; argc --argc-export ~/old/old-core/Argcfile.sh | jq -r '(.describe // "") …`
+- Bash: `rtk grep -n -B1 "^old-example()" ~/Argcfile.sh`
+- Bash: `sed -n 100,104p ~/Argcfile.sh`
+- Bash: `cd ~ && argc sync && argc --help | rtk grep "old-example"; cd /home/skogix/.local/src/marketplace && rtk git commit -q -…`
+- Bash: `cd ~/skogai && argc config files 2>&1 | head -4; cd ~/.local/src/marketplace && argc config files 2>&1 | head -3`
+- Bash: `rtk grep -n "config\|HOME/Argcfile\|ARGC_MAIN" Argcfile.sh | head; rtk git status --short`
+
+## 2026-10-22 21:47 · turn 351ea8c5
+
+**User**
+
+> yes we can move it into marketplace.sh because it probably needs a lot of work after this big change. please do so and update the documentation overall and move things around to match :)
+
+**Assistant**
+
+The root `Argcfile.sh` is now `plugins/skogai-runner/scripts/marketplace.sh`, and the docs match the new layout; it's committed. Your existing `marketplace` registration already points at it.
+
+**`argc marketplace`**
+- **Commands:** `new`, `check`, `json`, `evals` and `improve`, no longer nested under `plugin`. `check` validates the plugins and also confirms `marketplace.json` matches what the generator would write. `json` regenerates that file.
+- **Which checkout it works on:** the one it lives in, worked out from its own path. You can override that with `SKOGAI_MARKETPLACE_REPO_DIR`, the same variable old-example uses.
+- **`evals` instead of `eval`:** a function named `eval` would shadow the bash builtin that argc's own code calls.
+- **What I ran:** `argc marketplace check skogai-runner` from `~/skogai`, plus `argc runner wo ls` and `argc runner check` inside the marketplace. All passed, and plugin-name completion works.
+- **Not run since the move:** `new`, `evals` and `improve`.
+
+**Docs**
+- **The `argc` skill:** rewritten around the three scripts (main, `runner`, `marketplace`), with all recipes now written as `argc runner …` and `argc marketplace …`. It has a section on the main runner and new rules for writing scripts:
+  - resolve files from the script's real path, never `$PWD`;
+  - don't name a script `Argcfile.sh`;
+  - don't name a recipe after a builtin;
+  - `sync` is only needed after registering a script or changing its `@describe`.
+- **`HANDOVER.md`:** new layout, a decision entry for "one main runner, many scripts", and updated lists of what is and isn't verified.
+- **`TODO.md`:** marked the install done and added two items: rework `marketplace.sh`, and port what's still useful from old-example.
+- **`CLAUDE.md`:** the Validating section mentions `argc marketplace check`.
+- **`CONVENTIONS.md`:** fixed the `.skogai/` line. It claimed the whole directory is gitignored, but workorders and the journal are tracked.
+- The plugin is now version 0.3.0.
+
+The repo no longer has a root `Argcfile.sh`, so `~/Argcfile.sh` applies inside it as well. `.skogai/journal.md` is still uncommitted and was left alone.
+
+**Actions**
+
+- Bash: `rtk ls -l ~/.config/argc/commands/; grep -rn "Argcfile\|argc \(send\|improve\|wo\|journal\|plugin\|check\)\|argc-run" --…`
+- Bash: `rtk git status --short; rtk ls -la Argcfile.sh plugins/skogai-runner/scripts/; rtk git diff --stat`
+- Bash: `git mv Argcfile.sh plugins/skogai-runner/scripts/marketplace.sh && cat scripts/generate-marketplace-json.sh | head -30 |…`
+- Write `plugins/skogai-runner/scripts/marketplace.sh`
+- Bash: `f=plugins/skogai-runner/scripts/marketplace.sh; sed -i 's/^eval() {$/evals() {/; s/^builtin eval /eval /' $f && chmod +x…`
+- Bash: `cd ~/skogai && argc marketplace check skogai-runner 2>&1 | rtk grep -E "✔|✘|up to date|rror"; cd ~/.local/src/marketplac…`
+- Bash: `cd ~/.local/src/marketplace && rtk read plugins/skogai-runner/skills/argc/SKILL.md; rtk read plugins/skogai-runner/HANDO…`
+- Write `plugins/skogai-runner/skills/argc/SKILL.md`
+- Bash: `python3 - <<'PY'`
+- Edit `CLAUDE.md`
+- Bash: `sed -n 8,20p CONVENTIONS.md`
+- Bash: `sed -i 's#^\.skogai/                                runtime state and logs, gitignored$#.skogai/                        …`
+- Bash: `sed -n 14,16p CONVENTIONS.md; rtk git diff --cached plugins/skogai-runner/scripts/runner.sh | head`
+- Bash: `rtk git commit -q -m "skogai-runner: root Argcfile.sh becomes scripts/marketplace.sh (argc marketplace); docs for the ma…`
+

@@ -13,7 +13,7 @@ only what is specific to this repo.
 plugins/<name>/                         one directory per local plugin
 scripts/                                the generator and the pre-commit hook
 docs/                                   synced Claude Code docs (read-only)
-.skogai/                                runtime state and logs, gitignored
+.skogai/                                workorders and journal; logs/ and tmp/ are gitignored
 ```
 
 ## Marketplace Manifest
