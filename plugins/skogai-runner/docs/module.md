@@ -1,0 +1,155 @@
+# skogai modules
+
+a module is one thing skogai can do, packaged so it can be found, run,
+configured and copied into a repo as a unit. the argc script is one part of
+it; the files it works with and its config defaults are the rest.
+
+`skogai module check` enforces what this spec says a module must be.
+`modules/core` and `modules/memory` are the reference modules.
+
+## layout
+
+```
+<name>/
+  module.md        required: manifest (frontmatter) and what it is (body)
+  argc.sh          optional: the command, named by `command:`
+  templates/ ...   optional: anything it offers, named by `files:`
+  module.local.md  installed copies only: local overrides, never shipped
+```
+
+the directory name is the module name.
+
+## module.md
+
+```markdown
+---
+type: module
+name: memory
+description: one fact per file, each with a stale_after; expired ones get decided on
+command: argc.sh
+tools: [yq]
+requires: [core]
+files:
+  - templates/
+config:
+  dir: memory
+  stale-days: 30
+---
+
+# memory
+
+what it is, when to use it, what each config key means.
+```
+
+| field | | type | meaning |
+|---|---|---|---|
+| `type` | required | `module` | |
+| `name` | required | string | lowercase, one segment (`^[a-z][a-z0-9]*$`), same as the directory |
+| `description` | required | string | one line, what it is; shown by `module ls` |
+| `command` | optional | path | its argc script, relative to the module dir; `skogai <name>` runs it |
+| `tools` | optional | list | executables it needs on `PATH` |
+| `requires` | optional | list | modules it needs; every module but `core` requires `core` |
+| `files` | optional | list | paths it offers beyond `module.md` and `command`; a path ending in `/` is a whole directory |
+| `config` | optional | map | config defaults, read as `<name>.<key>` |
+
+a module consists of exactly `module.md`, `command` and `files`. nothing else
+is copied on install; anything else in the directory is the source's own.
+
+the body is prose for humans and agents: what the module is, every config key
+and what it means, and anything a user decides when installing it.
+
+## names
+
+- `core`, `config`, `module` and `help` are reserved: `skogai config ...` is
+  always core.
+- config keys are lowercase; `.` is a relation and `-` is part of a name, so
+  `memory.stale-days` is `SKOGAI_MEMORY_STALEDAYS` as env.
+
+## where modules are found
+
+in this order, the first module by a name wins:
+
+| layer | where |
+|---|---|
+| `local` | `.skogai/modules/` at the git root (or `$SKOGAI_LOCAL_DIR/modules`) |
+| `global` | `~/.config/skogai/modules/` (or `$SKOGAI_CONFIG_DIR/modules`) |
+| `source` | each dir on `$SKOGAI_MODULE_PATH`, by default the plugin's `modules/` |
+
+a module runs from wherever it is found; installing is not needed to use it.
+an installed copy shadows its source, a local one shadows a global one.
+
+## installing
+
+installing copies a module into `local` or `global` so it can be edited there.
+it is an offer, never a takeover:
+
+- `skogai module add <name|path>` prints the plan, one line per file: `add`
+  (missing, will copy), `same`, or `keep` (there and different, never
+  overwritten). it exits `1` if anything would be added.
+- `--apply` copies. `--to local|global` picks the layer, default
+  `core.module.install`.
+- `skogai module diff <name>` shows how an installed copy differs from its source.
+- nothing outside `.skogai/` (local) or `~/.config/skogai/` (global) is written.
+
+## config
+
+a module's keys live under its name. the layers, later wins:
+
+1. `config:` in every found `module.md` (defaults)
+2. system, global, local: git-config files `config` in `/etc/skogai`,
+   `~/.config/skogai`, `.skogai`
+3. `config:` in each installed module's `module.local.md`
+4. `--file` layers (`skogai config` only)
+5. `SKOGAI_*` env
+
+`skogai config set --module <name> <name>.<key> <value>` writes an installed
+module's `module.local.md`; `skogai config get <key> --show-origin` says which
+layer won.
+
+## the command
+
+an argc script. `skogai <name> <args>` runs it with `argc --argc-run` from the
+caller's directory, with this env (`skogai module env <name>`):
+
+| var | |
+|---|---|
+| `SKOGAI_MODULE` | its name |
+| `SKOGAI_MODULE_DIR` | its directory, wherever it was found; its `files:` are here |
+| `SKOGAI_LOCAL_DIR` | the local `.skogai`, absolute |
+| `SKOGAI_CONFIG_DIR` | the global dir, absolute |
+| `SKOGAI_<NAME>_<KEY>` | each of its own resolved config keys |
+
+rules:
+
+- read paths and config from that env, never from `$PWD` or its own location.
+  start with `: "${SKOGAI_MODULE_DIR:?run me as \`skogai <name>\`}"`.
+- `# @meta binname skogai <name>` so help reads right; `# @meta require-tools`
+  matches `tools:`.
+- exit `0` ok, `1` a finding or an unapplied change (like `diff`), `2` usage.
+- pure by default: a recipe that changes an existing file takes `--apply` and
+  without it prints what it would do. creating a new file is fine; overwriting
+  one is refused.
+- don't name a recipe after a bash builtin (`eval`, `cd`, `exec`, `set`); argc's
+  generated code calls them. group them instead (`config::set`).
+- other modules are called as `skogai <other> ...`, never by path.
+
+## creating one
+
+1. `skogai module new <name> "<description>"` scaffolds `module.md` and a
+   hello-world `argc.sh` in `.skogai/modules/<name>/` (`--to global` for
+   `~/.config/skogai/modules/`).
+2. fill in `module.md`: `tools`, `files`, `config` defaults, and a body that
+   explains every key.
+3. write the recipes in `argc.sh` (argc spec: `docs/argc/specification.md`).
+4. `skogai module check <name>`, then `skogai <name> --help` and run it.
+5. to ship it with a plugin, move the directory to the plugin's `modules/`.
+   it is then a `source` everywhere the plugin is enabled.
+
+## open
+
+- modules shipped by plugins other than this one: how their `modules/` get
+  onto `SKOGAI_MODULE_PATH`.
+- `module update`: pulling source changes into an installed copy, file by
+  file, `keep` respected.
+- versions in `module.md`, and `requires` with versions.
+- `command` as any executable, not only argc.

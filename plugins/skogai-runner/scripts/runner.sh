@@ -9,7 +9,7 @@
 # @meta require-tools jq,yq,git,claude
 # @meta binname argc
 # @env SKOGAI_MODEL=sonnet                         default model for agent calls
-# @env ARGC_DOCS                                   argc docs handed to `improve`, default the plugin's docs/
+# @env ARGC_DOCS                                   argc docs handed to `improve`, default the plugin's docs/argc/
 
 # shellcheck disable=SC2154 # argc_* are assigned by --argc-eval
 set -euo pipefail
@@ -52,7 +52,7 @@ send() {
 improve() {
     local files=("${argc_file[@]}")
     [[ ${#files[@]} -gt 0 ]] || mapfile -t files < <(realpath --relative-to=. "$PLUGIN_ROOT/scripts/runner.sh" "$PLUGIN_ROOT/skills/argc/SKILL.md")
-    local docs="${ARGC_DOCS:-$PLUGIN_ROOT/docs}"
+    local docs="${ARGC_DOCS:-$PLUGIN_ROOT/docs/argc}"
     docs="${docs/#\~/$HOME}"
     local ctx=()
     [[ -f "$docs/specification.md" ]] && ctx+=("$docs/specification.md")

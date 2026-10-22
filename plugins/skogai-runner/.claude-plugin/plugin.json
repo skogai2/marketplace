@@ -1,6 +1,8 @@
 {
   "name": "skogai-runner",
-  "version": "0.3.0",
-  "description": "the skogai command runner: argc recipes that hand typed work to agents and improve themselves",
-  "author": { "name": "skogix" }
+  "version": "0.4.0",
+  "description": "skogai modules: argc commands packaged with their files and config, run as `skogai <module>`, plus typed agent io",
+  "author": {
+    "name": "skogix"
+  }
 }

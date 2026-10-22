@@ -9,10 +9,10 @@ skogix's words: "you will be the one writing context, your intentions and will b
 ## what it is
 
 - `scripts/main.sh`: template for the main runner `~/Argcfile.sh`. `argc register <file> <name>` links an argc script into `~/.config/argc/commands/` and `sync` regenerates the main file with one forwarding recipe per script (`argc <name> ...`), delegating help and completion to the script itself. any argc script can be registered: `argc skogai` (the core module) is one.
-- `bin/skogai` and `modules/`: the module standard. a module is a dir with a `module.md` (command, tools, requires, files, config defaults); `core` (`modules/core/`) holds config and `skogai module ls|show|add|diff|new`. read `modules/core/module.md`.
+- `bin/skogai` and `modules/`: skogai modules, spec in `docs/module.md`, skill `module`. a module is a dir with a `module.md` (command, tools, requires, files, config defaults) and usually an argc script; `skogai <name>` runs it with its env. `core` holds config and `skogai module ls|show|check|add|diff|new|env`; `memory` is the worked example (`.skogai/memory/`).
 - `scripts/runner.sh`, `argc runner`: the core recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
 - `scripts/marketplace.sh`, `argc marketplace`: plugin recipes for this marketplace (`new`, `check`, `json`, `evals`, `improve`). it used to be the repo root `Argcfile.sh`; the repo has none now, so `~/Argcfile.sh` applies inside it too.
-- skill `argc` (how to use and extend all of it), schemas in `schemas/`, the argc docs in `docs/`.
+- skill `argc` (how to use and extend all of it), schemas in `schemas/`, the argc docs in `docs/argc/`, the module spec in `docs/module.md`.
 - `.skogai/workorders/smoke-test.*`: a worked example, a workorder and its typed result.
 - `TODO.md`: what's needed before it runs here.
 
@@ -26,12 +26,16 @@ usage is in `skills/argc/SKILL.md`, and `argc --help` is the source of truth.
 - **one main runner, many scripts**: each script owns one domain and runs standalone with `argc --argc-run`; the main runner only forwards. scripts resolve their own files from their real path and run from the caller's directory.
 - **workorders are blobs of text**: markdown, frontmatter for `schema`/`files`/`tools`. they go wherever we want.
 
+- **modules, 2026-10-22**: a module is the argc script plus the files it works with and its config defaults, copied into `.skogai/` as a unit. found local, then global, then sources; runs from wherever found. installing is an offer: plan, `--apply`, changed files are kept. a module's command reads everything from `SKOGAI_*` env, no lookups of its own.
+
 ## verified (skogai repo, haiku)
 
 - `argc runner check` (argc parse, shellcheck, schemas, `claude plugin validate`) and `argc marketplace check`: pass, from anywhere under `~`.
 - the main runner: forwarding, help and completion (subcommands, schema names, file paths) through `~/Argcfile.sh`.
 - `send -s answer`, `wo new` + `wo run -s check`: typed output as expected.
 - the loop: smoke-test findings went into `plugin improve` (now `argc marketplace improve`) and a patch came out. 2 of 3 hunks were right. one inverted the exit-code meaning and was rejected. **review patches, don't blind `--apply`.**
+
+- modules (scratch repos): `module add/diff/new/check`, `config set --module`, `skogai greet hello` reading its own config. `skogai memory ls/stale/index` read-only against `~/skogai`.
 
 ## not verified
 

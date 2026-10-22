@@ -166,6 +166,25 @@ module::command() {
     echo "$dir/$cmd"
 }
 
+# @cmd check modules against the spec (docs/module.md), all found ones if none given
+#
+# one line per problem: name, error or warn, message. exit 1 on any error;
+# a missing tool is a warn, it is about this machine, not the module.
+# @arg module*[?`_choice_module`]  names, or paths to module dirs
+module::check() {
+    local m dir rc=0 targets=("${argc_module[@]}")
+    [[ ${#targets[@]} -gt 0 ]] || mapfile -t targets < <(_modules | cut -f3)
+    for m in "${targets[@]}"; do
+        if [[ $m == */* || $m == . ]]; then
+            dir="$(cd "${ARGC_PWD:-$PWD}" && realpath "$m")"
+        else
+            IFS=$'\t' read -r _ _ dir < <(_module "$m") || { printf '%s\terror\tnot found\n' "$m"; rc=1; continue; }
+        fi
+        _check "$dir" || rc=1
+    done
+    return "$rc"
+}
+
 # @cmd the env a module's command runs with, as export lines
 #
 # SKOGAI_MODULE, SKOGAI_MODULE_DIR, SKOGAI_LOCAL_DIR and SKOGAI_CONFIG_DIR
@@ -237,6 +256,7 @@ module::diff() {
 # @option --to[local|global]  where to create it, default core.module.install
 module::new() {
     [[ $argc_name =~ ^[a-z][a-z0-9]*$ ]] || { echo "bad name: $argc_name" >&2; exit 2; }
+    ! _reserved "$argc_name" || { echo "reserved: $argc_name" >&2; exit 2; }
     local to dest core tpl f
     to="${argc_to:-$(_get core.module.install local)}"
     dest="$(_install_dir "$to")/$argc_name"
@@ -327,6 +347,50 @@ _module_files() {
             if [[ -d $dir/$f ]]; then (cd "$dir" && find "${f%/}" -type f); else echo "$f"; fi
         done < <(_field "$dir/module.md" '.files[]')
     } | grep . | sort -u
+}
+
+# names a module can't have: `skogai <name>` would be core's
+_reserved() { [[ $1 =~ ^(core|config|module|help)$ ]]; }
+
+# spec problems of one module dir as "name<TAB>error|warn<TAB>message"; 1 on any error
+_check() {
+    local dir="$1" md="$1/module.md" name f t r err=0
+    name="$(basename "$dir")"
+    _bad() { printf '%s\terror\t%s\n' "$name" "$1"; err=1; }
+    [[ -f $md ]] || { _bad "no module.md"; return 1; }
+    yq --front-matter=extract 'select(document_index == 0) | tag == "!!map"' "$md" 2>/dev/null | grep -qx true ||
+        { _bad "module.md has no frontmatter map"; return 1; }
+    [[ $(_field "$md" .type) == module ]] || _bad "type is not module"
+    [[ $(_field "$md" .name) == "$name" ]] || _bad "name is not the directory name ($name)"
+    [[ $name =~ ^[a-z][a-z0-9]*$ ]] || _bad "name is not lowercase, one segment"
+    [[ $name == core ]] || ! _reserved "$name" || _bad "name is reserved"
+    [[ -n $(_field "$md" .description) && $(_field "$md" .description | wc -l) == 1 ]] || _bad "description is not one line"
+    f="$(_field "$md" .command)"
+    if [[ -n $f ]]; then
+        if [[ ! -f $dir/$f ]]; then
+            _bad "command $f is missing"
+        else
+            argc --argc-export "$dir/$f" >/dev/null 2>&1 || _bad "command $f does not parse with argc"
+        fi
+    fi
+    for t in tools requires files; do
+        [[ $(yq --front-matter=extract ".$t | tag" "$md") =~ ^\!\!(seq|null)$ ]] || _bad "$t is not a list"
+    done
+    [[ $(yq --front-matter=extract '.config | tag' "$md") =~ ^\!\!(map|null)$ ]] || _bad "config is not a map"
+    while IFS= read -r f; do
+        [[ -z $f || -e $dir/$f ]] || _bad "file $f is missing"
+    done < <(_field "$md" '.files[]')
+    [[ $name == core ]] || _field "$md" '.requires[]' | grep -qx core || _bad "does not require core"
+    while IFS= read -r r; do
+        [[ -z $r ]] || _module "$r" >/dev/null || _bad "requires $r, not found"
+    done < <(_field "$md" '.requires[]')
+    while IFS= read -r t; do
+        [[ -z $t ]] || command -v "$t" >/dev/null || printf '%s\twarn\ttool %s not on PATH\n' "$name" "$t"
+    done < <(_field "$md" '.tools[]')
+    while IFS= read -r f; do
+        printf '%s\twarn\tunknown field %s\n' "$name" "$f"
+    done < <(yq --front-matter=extract 'keys | .[] | select(test("^(type|name|description|command|tools|requires|files|config)$") | not)' "$md")
+    return "$err"
 }
 
 # tools and modules a module dir needs and can't find, one line each

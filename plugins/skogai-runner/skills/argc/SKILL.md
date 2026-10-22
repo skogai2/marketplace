@@ -13,7 +13,7 @@ one `argc` for everything. `~/Argcfile.sh` is the main runner: every registered 
 | `${CLAUDE_PLUGIN_ROOT}/scripts/main.sh` | the main runner itself | `register`, `unregister`, `ls`, `sync` |
 | `${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh` | `argc runner` | typed agent io: `send`, `improve`, `wo`, `journal`, `check` |
 | `${CLAUDE_PLUGIN_ROOT}/scripts/marketplace.sh` | `argc marketplace` | skogai-marketplace plugins: `new`, `check`, `json`, `evals`, `improve` |
-| `${CLAUDE_PLUGIN_ROOT}/modules/core/argc.sh` | `argc skogai`, or `skogai` from the plugin's `bin/` | core module: `config get/set/list/env/files`, `module ls/show/add/diff/new`. see `modules/core/module.md` |
+| `${CLAUDE_PLUGIN_ROOT}/modules/core/argc.sh` | `argc skogai`, or `skogai` from the plugin's `bin/` | core module: `config get/set/list/env/files`, `module ls/show/check/add/diff/new/env`. modules: skill `module`, spec `docs/module.md` |
 
 without the main runner (outside `~`, or not installed), run a script directly: `argc --argc-run ${CLAUDE_PLUGIN_ROOT}/scripts/runner.sh <cmd>`. a repo with its own `Argcfile.sh` shadows `~/Argcfile.sh` inside it.
 
@@ -73,7 +73,7 @@ files:
 
 ## extending
 
-a recipe is a bash function with `# @cmd` above it; `foo::bar` is `argc <name> foo bar`. flags and options become `$argc_<name>`. spec: `${CLAUDE_PLUGIN_ROOT}/docs/specification.md`, the rest of `docs/` covers variables, completions, help format and macros.
+a recipe is a bash function with `# @cmd` above it; `foo::bar` is `argc <name> foo bar`. flags and options become `$argc_<name>`. spec: `${CLAUDE_PLUGIN_ROOT}/docs/argc/specification.md`, the rest of `docs/argc/` covers variables, completions, help format and macros.
 
 - recipes every repo can use go in `runner.sh`; recipes for one repo or tool go in their own script, registered under its own name (`marketplace.sh` is the example).
 - a script resolves its own files from `realpath "${BASH_SOURCE[0]}"`, never `$PWD`: registered scripts run from the caller's directory, through a symlink.
