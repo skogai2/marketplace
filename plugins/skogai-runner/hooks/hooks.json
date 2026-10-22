@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$CLAUDE_ENV_FILE\" ] || \"${CLAUDE_PLUGIN_ROOT}/bin/skogai\" module build --to global --shell bash | grep -v '^source ' >> \"$CLAUDE_ENV_FILE\""
+          }
+        ]
+      }
+    ]
+  }
+}

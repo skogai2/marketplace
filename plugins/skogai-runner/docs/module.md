@@ -114,7 +114,10 @@ module in `.skogai/modules/<name>/`, never into the source.
 
 - in Claude Code sessions it is this plugin's `bin/skogai`, on the Bash tool's
   `PATH` while the plugin is enabled. it finds modules when it runs, so
-  nothing needs registering.
+  nothing needs registering. its `SessionStart` hook runs
+  `skogai module build --to global` and puts the built `skogai` first on
+  the Bash tool's `PATH` (via `CLAUDE_ENV_FILE`), so `skogai --help` lists
+  every module found from where the session started.
 - in a shell, `skogai module build` generates a static `skogai`: one argc
   file with a forwarding recipe for core's groups and every module found
   from there, so `--help`, completion and man pages cover all of them. every
