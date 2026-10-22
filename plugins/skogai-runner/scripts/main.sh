@@ -62,7 +62,7 @@ sync() {
         for f in "$COMMANDS"/*.sh; do
             [[ -e "$f" ]] || { [[ -L "$f" ]] && echo "skip  $(basename "$f"): $(readlink "$f") is gone" >&2; continue; }
             name="$(basename "$f" .sh)"
-            describe="$(argc --argc-export "$f" 2>/dev/null | jq -r '.describe | split("\n")[0]')" ||
+            describe="$(argc --argc-export "$f" 2>/dev/null | jq -r '(.describe // "") | split("\n")[0] // ""')" ||
                 { echo "skip  $name: does not parse" >&2; continue; }
             printf '\n# @cmd %s\n# @arg args~[?`_choice_delegate`]\n%s() { _delegate %s "${argc_args[@]}"; }\n' \
                 "${describe:-$name}" "$name" "$name"
