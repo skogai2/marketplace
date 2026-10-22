@@ -8,17 +8,18 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 ## what it is
 
-- `Argcfile.sh`: recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
-- `plugins/skogai-runner/`: skill `argc` (how to use and extend the runner) and schemas `answer`, `edit`, `check`.
+- `scripts/runner.sh`: the core recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
+- skill `argc` (how to use and extend the runner), schemas in `schemas/`, the argc docs in `docs/`.
+- the marketplace root `Argcfile.sh` forwards `send`/`improve`/`wo`/`journal` to the core and keeps the `plugin` recipes.
 - `.skogai/workorders/smoke-test.*`: a worked example, a workorder and its typed result.
 - `TODO.md`: what's needed before it runs here.
 
-usage is in `plugins/skogai-runner/skills/argc/SKILL.md`, and `argc --help` is the source of truth.
+usage is in `skills/argc/SKILL.md`, and `argc --help` is the source of truth.
 
 ## decisions
 
 - **pure by default**: `improve` prints a patch and exits `1`, like `skogai plan`. only `--apply` writes. scaffolds (`wo new`, `plugin new`) create new files and refuse to overwrite.
-- **whole files, derived patch**: workers return complete files (schema `edit`), and the runner builds the diff with `diff -u`, so a bad hunk from a model can't happen. paths not handed over are refused.
+- **whole files, derived patch**: workers return complete files (schema `edit`), and the runner builds the diff with `diff -u`, so a bad hunk from a model can't happen. `--apply` writes those files directly. paths not handed over are refused.
 - **no tools by default**: inputs are inlined as `<file path>` blocks. `--tools` opts in.
 - **workorders are blobs of text**: markdown, frontmatter for `schema`/`files`/`tools`. they go wherever we want.
 

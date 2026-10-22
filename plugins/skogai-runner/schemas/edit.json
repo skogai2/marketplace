@@ -8,7 +8,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "description": "relative to the repo root, one of the handed-over files" },
+          "path": { "type": "string", "description": "exactly as handed over" },
           "content": { "type": "string", "description": "the complete new file content" }
         },
         "required": ["path", "content"],

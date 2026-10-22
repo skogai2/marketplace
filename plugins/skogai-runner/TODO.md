@@ -4,8 +4,8 @@
 - [ ] argc;`wo` results are untyped files beside the workorder. decide if workorder becomes a dash type (dash TODO: task -> workorder)
 - [ ] argc;fold `mise run dash:check` into `argc` or keep mise for tasks and argc for agent io. pick one runner
 - [x] argc;config.toml lacks `argc` and `yq` (and `shellcheck` for `argc check`)
-- [ ] argc;`ARGC_DOCS` defaults to `~/.local/src/argc/docs`, missing for claude. add an `argc-docs` task like `claude-docs`
-- [ ] argc;argc only finds an Argcfile up the tree. place it (e.g. dotfile `~/Argcfile.sh`) and resolve `PLUGINS`/`SCHEMAS` from the script's real path, not `$PWD`
-- [ ] argc;argc cds to the Argcfile dir, so `-f <file>` resolves against it, not the caller. resolve against `$ARGC_PWD`
+- [x] argc;`ARGC_DOCS` defaults to the plugin's `docs/`
+- [x] argc;the core is `scripts/runner.sh`, schemas and docs resolve from its real path. still open: a short way to call it outside a repo with an `Argcfile.sh` that forwards to it (alias, or a dotfile `~/Argcfile.sh`)
+- [x] argc;`-f <file>` resolves against the caller's directory
 - [x] argc;no `.gitignore` here: `.skogai/logs/` (or wherever logs land) must be ignored
-- [ ] argc;workorders and logs paths are `$ROOT/.skogai/...`, pick where they go
+- [x] argc;workorders, journal and logs live in `.skogai/` at the caller's git root
