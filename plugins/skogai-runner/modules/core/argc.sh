@@ -166,6 +166,25 @@ module::command() {
     echo "$dir/$cmd"
 }
 
+# @cmd the env a module's command runs with, as export lines
+#
+# SKOGAI_MODULE, SKOGAI_MODULE_DIR, SKOGAI_LOCAL_DIR and SKOGAI_CONFIG_DIR
+# (both absolute), and the module's own resolved keys: runner.model is
+# SKOGAI_RUNNER_MODEL.
+# @arg name![`_choice_module`]
+module::env() {
+    local dir key value
+    IFS=$'\t' read -r _ _ dir < <(_module "$argc_name") || exit 1
+    printf 'export SKOGAI_MODULE=%q\n' "$argc_name"
+    printf 'export SKOGAI_MODULE_DIR=%q\n' "$dir"
+    printf 'export SKOGAI_LOCAL_DIR=%q\n' "$(_local_dir)"
+    printf 'export SKOGAI_CONFIG_DIR=%q\n' "$GLOBAL_DIR"
+    while IFS=$'\t' read -r key value _; do
+        [[ $key == "$argc_name".* ]] || continue
+        printf 'export %s=%q\n' "$(_env_name "$key")" "${value//$SEP/$'\n'}"
+    done < <(_resolve)
+}
+
 # @cmd copy a module into .skogai/modules, or the global dir. prints the plan unless --apply
 #
 # copies module.md, its command and its `files:`. a file already there and

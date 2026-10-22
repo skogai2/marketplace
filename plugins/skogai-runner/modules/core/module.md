@@ -45,3 +45,18 @@ shadows its source and a local one shadows a global one.
 `module new` put a module when `--to` is not given. an installed module's
 `module.local.md` overrides its defaults: `skogai config set --module core
 core.module.install global`.
+
+## what a module's command gets
+
+`skogai <name> ...` runs the command with `skogai module env <name>` exported:
+
+| var | what |
+|---|---|
+| `SKOGAI_MODULE` | its name |
+| `SKOGAI_MODULE_DIR` | its directory: where its `files:` are, installed or source |
+| `SKOGAI_LOCAL_DIR` | the local `.skogai`, absolute |
+| `SKOGAI_CONFIG_DIR` | the global dir, absolute |
+| `SKOGAI_<NAME>_<KEY>` | each of its own resolved keys: `memory.stale-days` is `SKOGAI_MEMORY_STALEDAYS` |
+
+a command needs no lookups of its own; `: "${SKOGAI_MODULE_DIR:?}"` makes it
+refuse to run outside `skogai`. `modules/memory` is the worked example.
