@@ -166,6 +166,33 @@ module::command() {
     echo "$dir/$cmd"
 }
 
+# @cmd run modules' tests with bats: core's contract, then the module's own tests/
+#
+# the contract (core's tests/contract.bats) runs for every module; its own
+# tests/*.bats load core's tests/helper.bash for an isolated repo and layers.
+# tests come from the module's source when there is one, else where it is found.
+# @arg module*[`_choice_module`]  default every module found
+# @option --filter  only tests whose name matches this regex
+module::test() {
+    : "${SKOGAI_BIN:?run me as skogai module test}"
+    command -v bats >/dev/null || { echo "bats is not on PATH" >&2; exit 2; }
+    local core name dir rc=0 files names=("${argc_module[@]}")
+    IFS=$'\t' read -r _ _ core < <(_module core)
+    [[ ${#names[@]} -gt 0 ]] || mapfile -t names < <(_modules | cut -f1)
+    for name in "${names[@]}"; do
+        dir="$(_source "$name")" || IFS=$'\t' read -r _ _ dir < <(_module "$name") ||
+            { echo "no module: $name" >&2; rc=1; continue; }
+        files=("$core/tests/contract.bats")
+        [[ ! -d $dir/tests ]] || mapfile -t -O 1 files < <(find "$dir/tests" -name '*.bats' ! -path "$core/tests/contract.bats" | sort)
+        echo "# $name" >&2
+        # the module under test is a source in its isolated repo, wherever it was found
+        SKOGAI_MODULE_PATH="$(dirname "$dir"):$MODULE_PATH" \
+            SKOGAI_TEST_MODULE="$name" SKOGAI_TEST_HELPER="$core/tests/helper.bash" \
+            bats ${argc_filter:+--filter "$argc_filter"} "${files[@]}" || rc=1
+    done
+    return "$rc"
+}
+
 # @cmd check modules against the spec (docs/module.md), all found ones if none given
 #
 # one line per problem: name, error or warn, message. exit 1 on any error;
@@ -209,7 +236,7 @@ module::env() {
 # copies module.md, its command and its `files:`. a file already there and
 # different is kept and reported; `skogai module diff` shows how.
 # exit 1 when there is something to copy and --apply was not given.
-# @arg source![`_choice_source`]  a module name from the sources, or a path to a module dir
+# @arg source![?`_choice_source`]  a module name from the sources, or a path to a module dir
 # @option --to[local|global]  where to install, default core.module.install
 # @flag --apply  copy the files
 module::add() {
@@ -263,14 +290,14 @@ module::new() {
     [[ ! -e $dest ]] || { echo "exists: $dest" >&2; exit 2; }
     IFS=$'\t' read -r _ _ core < <(_module core)
     tpl="$core/templates/module"
-    mkdir -p "$dest"
-    for f in "$tpl"/*; do
+    while IFS= read -r f; do
+        mkdir -p "$(dirname "$dest/$f")"
         NAME="$argc_name" DESC="${argc_description:-}" \
-            awk '{ gsub(/\{\{name\}\}/, ENVIRON["NAME"]); gsub(/\{\{description\}\}/, ENVIRON["DESC"]); print }' \
-            "$f" >"$dest/$(basename "$f")"
-        [[ ! -x $f ]] || chmod +x "$dest/$(basename "$f")"
-        echo "wrote $dest/$(basename "$f")" >&2
-    done
+            awk '{ gsub(/\{\{name\}\}/, ENVIRON["NAME"]); gsub(/\{\{description\}\}/, ENVIRON["DESC"]); gsub(/\{\{NAME\}\}/, toupper(ENVIRON["NAME"])); print }' \
+            "$tpl/$f" >"$dest/${f//_name_/$argc_name}"
+        [[ ! -x $tpl/$f ]] || chmod +x "$dest/${f//_name_/$argc_name}"
+        echo "wrote $dest/${f//_name_/$argc_name}" >&2
+    done < <(cd "$tpl" && find . -type f -printf '%P\n' | sort)
 }
 
 # the resolved "key<TAB>value<TAB>origin" line of a key; exit 1 if unset
@@ -387,6 +414,7 @@ _check() {
     while IFS= read -r t; do
         [[ -z $t ]] || command -v "$t" >/dev/null || printf '%s\twarn\ttool %s not on PATH\n' "$name" "$t"
     done < <(_field "$md" '.tools[]')
+    compgen -G "$dir/tests/*.bats" >/dev/null || printf '%s\twarn\tno tests/*.bats\n' "$name"
     while IFS= read -r f; do
         printf '%s\twarn\tunknown field %s\n' "$name" "$f"
     done < <(yq --front-matter=extract 'keys | .[] | select(test("^(type|name|description|command|tools|requires|files|config)$") | not)' "$md")
@@ -539,7 +567,7 @@ _choice_target_key() {
 
 _choice_module() { _modules | cut -f1; }
 _choice_installed() { _modules | awk -F'\t' '$2 != "source" { print $1 }'; }
-_choice_source() { _module_bases | awk -F'\t' '$1 == "source" { print $2 }' | while read -r p; do ls "$p"; done; }
+_choice_source() { _module_bases | awk -F'\t' '$1 == "source" { print $2 }' | while read -r p; do ls "$p"; done | sort -u; }
 
 # the frontmatter path of a key in a markdown layer: the key minus its scope,
 # under `config.` for a module's module.local.md

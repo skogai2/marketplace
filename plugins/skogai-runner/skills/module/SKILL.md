@@ -1,7 +1,7 @@
 ---
 name: module
 description: Find, run, install, configure and create skogai modules (`skogai <name> ...`, `skogai module ...`, `skogai config ...`). Use when asked to add, change or package a skogai capability as a module, when a module's command or config is involved, or when something should land in `.skogai/` as a unit.
-allowed-tools: Bash(skogai module ls), Bash(skogai module show *), Bash(skogai module check *), Bash(skogai module diff *), Bash(skogai config get *), Bash(skogai config list *), Bash(skogai config files *)
+allowed-tools: Bash(skogai module ls), Bash(skogai module show *), Bash(skogai module check *), Bash(skogai module diff *), Bash(skogai config get *), Bash(skogai config list *), Bash(skogai config files *), Bash(skogai module test *)
 ---
 
 # skogai modules
@@ -23,7 +23,7 @@ changing a module. `modules/memory` is the worked example.
 1. `skogai module new <name> "<description>"`: scaffolds `.skogai/modules/<name>/`.
 2. fill in `module.md`: `tools`, `files`, `config` defaults, and a body explaining every key.
 3. write `argc.sh`: read paths and config from `SKOGAI_MODULE_DIR`, `SKOGAI_LOCAL_DIR` and `SKOGAI_<NAME>_<KEY>`, never `$PWD` or its own path. pure by default, `--apply` for changes to existing files. exit `0` ok, `1` finding or unapplied change, `2` usage.
-4. `skogai module check <name>` must print no `error`, then run it.
+4. tests in `tests/*.bats`, starting with `load "$SKOGAI_TEST_HELPER"` (spec: tests). `skogai module test <name>` runs the contract every module is held to, then them; both must pass.
 5. to ship it, move the directory to a plugin's `modules/`.
 
 a capability that needs more than one module's files is two modules with `requires:`, not one bigger one.

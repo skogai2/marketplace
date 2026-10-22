@@ -7,6 +7,8 @@ tools: [git, yq, argc]
 requires: []
 files:
   - templates/
+  - tests/helper.bash
+  - tests/contract.bats
 config:
   module:
     install: local
@@ -28,6 +30,7 @@ skogai-runner plugin.
 | `module add <name\|path> [--to] [--apply]` | copy a module into `.skogai/modules` or the global dir |
 | `module diff <name>` | an installed copy against its source |
 | `module new <name> <description> [--to]` | scaffold from `templates/module/` |
+| `module test [name]... [--filter]` | contract tests for each module, then its own `tests/` (bats) |
 | `module env <name>` | the env a module's command runs with |
 | `module command <name>` | the path of a module's argc script |
 
@@ -37,5 +40,11 @@ skogai-runner plugin.
 |---|---|---|
 | `core.module.install` | `local` | where `module add` and `module new` put a module without `--to`: `local` or `global` |
 
-`templates/module/` is what `module new` scaffolds; edit an installed copy to
-change it for one repo.
+`templates/module/` is what `module new` scaffolds (`_name_` in a path becomes
+the module's name); edit an installed copy to change it for one repo.
+
+## tests
+
+`tests/helper.bash` is the base every module's tests load, and
+`tests/contract.bats` is what every module is held to; both are offered, so an
+installed core keeps them. `tests/core.bats` is core's own.

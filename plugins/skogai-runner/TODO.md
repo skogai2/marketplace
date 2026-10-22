@@ -19,3 +19,4 @@
 - [ ] module;top-level `bin/` blocks claude.ai organization sync of this plugin (docs/plugins/components.md)
 - [ ] module;`~/skogai/.skogai/config` is a directory, the local config layer is a file at that path
 - [ ] module;`~/skogai` memory `dotfiles-via-mise-tools` has no `stale_after`
+- [ ] module;run `skogai module test` in the `marketplace` workflow and pre-commit (CI needs bats, argc, yq)

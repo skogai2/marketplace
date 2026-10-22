@@ -35,6 +35,7 @@ usage is in `skills/argc/SKILL.md`, and `argc --help` is the source of truth.
 - `send -s answer`, `wo new` + `wo run -s check`: typed output as expected.
 - the loop: smoke-test findings went into `plugin improve` (now `argc marketplace improve`) and a patch came out. 2 of 3 hunks were right. one inverted the exit-code meaning and was rejected. **review patches, don't blind `--apply`.**
 
+- `skogai module test`: 22 core and 15 memory tests (bats 1.14, via mise), plus the contract for a fresh `module new` scaffold.
 - modules (scratch repos): `module add/diff/new/check`, `config set --module`, `skogai greet hello` reading its own config. `skogai memory ls/stale/index` read-only against `~/skogai`.
 
 ## not verified

@@ -14,6 +14,7 @@ it; the files it works with and its config defaults are the rest.
   module.md        required: manifest (frontmatter) and what it is (body)
   argc.sh          optional: the command, named by `command:`
   templates/ ...   optional: anything it offers, named by `files:`
+  tests/*.bats     its own tests; not offered unless listed in `files:`
   module.local.md  installed copies only: local overrides, never shipped
 ```
 
@@ -133,15 +134,38 @@ rules:
   generated code calls them. group them instead (`config::set`).
 - other modules are called as `skogai <other> ...`, never by path.
 
+## tests
+
+bats. `skogai module test [name]...` runs, for each module:
+
+1. the contract, core's `tests/contract.bats`: `module check` has no errors,
+   `--help` exits 0, the command refuses to run outside `skogai`, every
+   `config:` default resolves under its name, `module env` is right, `add` is
+   a plan and `--apply` installs, and the installed copy passes check and runs.
+2. its own `tests/*.bats`, from its source when it has one.
+
+a test file starts with `load "$SKOGAI_TEST_HELPER"` (core's
+`tests/helper.bash`). every test then runs in an empty git repo
+(`$REPO`, with `$LOCAL` its `.skogai`) with its own system and global layers
+and no `SKOGAI_*` config from the caller, so nothing outside
+`BATS_TEST_TMPDIR` is touched. the module under test is a source there.
+helpers: `skogai`, `module_dir`, `module_field`, `assert_status`,
+`assert_output_has`, `refute_output_has`, `assert_file`. a file with its own
+`setup()` calls `skogai_setup` first.
+
+set state the way a user would (`skogai config set`, `skogai module add`),
+not by writing layer files.
+
 ## creating one
 
-1. `skogai module new <name> "<description>"` scaffolds `module.md` and a
-   hello-world `argc.sh` in `.skogai/modules/<name>/` (`--to global` for
-   `~/.config/skogai/modules/`).
+1. `skogai module new <name> "<description>"` scaffolds `module.md`, a
+   hello-world `argc.sh` and `tests/<name>.bats` in `.skogai/modules/<name>/`
+   (`--to global` for `~/.config/skogai/modules/`).
 2. fill in `module.md`: `tools`, `files`, `config` defaults, and a body that
    explains every key.
 3. write the recipes in `argc.sh` (argc spec: `docs/argc/specification.md`).
-4. `skogai module check <name>`, then `skogai <name> --help` and run it.
+4. write its tests, then `skogai module test <name>`: the contract and its
+   own tests pass.
 5. to ship it with a plugin, move the directory to the plugin's `modules/`.
    it is then a `source` everywhere the plugin is enabled.
 
