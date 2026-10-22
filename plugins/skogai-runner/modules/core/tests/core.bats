@@ -48,6 +48,14 @@ fixture() {
     assert_output_has global
 }
 
+@test "config: set --module on a source module writes the local install dir" {
+    skogai config set --module core core.module.install global
+    run skogai config get core.module.install --show-origin
+    assert_output_has "module:core.local	global"
+    run yq --front-matter=extract .config.module.install "$LOCAL/modules/core/module.local.md"
+    assert_output_has global
+}
+
 @test "config: set --module refuses a key outside the module" {
     skogai module add core --apply >/dev/null 2>&1
     run skogai config set --module core other.key x

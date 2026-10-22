@@ -46,7 +46,7 @@ config::get() {
 
 # @cmd set a key in the local layer, the global one, a module's module.local.md or a --file's .local.md
 # @flag --global  write to the global layer instead of local
-# @option --module[`_choice_installed`]  write this installed module's module.local.md
+# @option --module[`_choice_module`]  write this module's module.local.md
 # @option --file  write this file's .local.md frontmatter instead
 # @option --scope  the section --file keys are mounted under
 # @arg key![?`_choice_key`]
@@ -55,7 +55,7 @@ config::set() {
     local file key
     if _md_target; then
         key="$(_file_key "$argc_key")" || exit 2
-        [[ -f $file ]] || printf -- '---\n{}\n---\n' >"$file"
+        [[ -f $file ]] || { mkdir -p "$(dirname "$file")" && printf -- '---\n{}\n---\n' >"$file"; }
         K="$key" V="$argc_value" \
             yq -i --front-matter=process 'setpath(strenv(K) | split("."); strenv(V) | from_yaml)' "$file"
         return
@@ -67,7 +67,7 @@ config::set() {
 
 # @cmd remove a key from the local layer, the global one, a module's module.local.md or a --file's .local.md
 # @flag --global  remove from the global layer instead of local
-# @option --module[`_choice_installed`]  remove from this installed module's module.local.md
+# @option --module[`_choice_module`]  remove from this module's module.local.md
 # @option --file  remove from this file's .local.md frontmatter instead
 # @option --scope  the section --file keys are mounted under
 # @arg key![`_choice_target_key`]
@@ -128,7 +128,7 @@ config::files() {
         _present "$layer" "$(_layer_file "$layer")"
     done
     while IFS=$'\t' read -r name layer dir; do
-        [[ $layer == source ]] || _present "module:$name" "$dir/module.local.md"
+        _present "module:$name" "$(_module_local_md "$name" "$layer" "$dir")"
     done < <(_modules)
     while IFS= read -r file; do
         _present file "$file"
@@ -538,6 +538,12 @@ _layer_file() {
 # x.md -> x.local.md
 _local_md() { echo "${1%.md}.local.md"; }
 
+# a module's overrides: beside its module.md when installed; a source one's
+# go in the local install dir, never into the source
+_module_local_md() {
+    if [[ $2 == source ]]; then echo "$(_install_dir local)/$1/module.local.md"; else echo "$3/module.local.md"; fi
+}
+
 # --file layers in fold order: each x.md, then its x.local.md
 _file_layers() {
     local f
@@ -550,9 +556,9 @@ _file_layers() {
 # set/unset into a markdown file: sets `file`, and `argc_scope` for --module
 _md_target() {
     if [[ -n ${argc_module:-} ]]; then
-        local dir
-        IFS=$'\t' read -r _ _ dir < <(_module "$argc_module") || { echo "no module: $argc_module" >&2; exit 2; }
-        file="$dir/module.local.md"
+        local layer dir
+        IFS=$'\t' read -r _ layer dir < <(_module "$argc_module") || { echo "no module: $argc_module" >&2; exit 2; }
+        file="$(_module_local_md "$argc_module" "$layer" "$dir")"
         argc_scope="$argc_module"
         MD_ROOT=config
         return 0
@@ -617,7 +623,7 @@ _resolve() {
         done < <(git config -f "$file" --list -z)
     done
     while IFS=$'\t' read -r name layer dir; do
-        [[ -z $name || $layer == source ]] || _fold "$dir/module.local.md" "$name" .config "module:$name.local"
+        [[ -z $name ]] || _fold "$(_module_local_md "$name" "$layer" "$dir")" "$name" .config "module:$name.local"
     done <<<"$mods"
     while IFS= read -r file; do
         _fold "$file" "${argc_scope:-}" . "file:$file"
@@ -638,9 +644,12 @@ _target_file() {
     if [[ ${argc_global:-} == 1 ]]; then _layer_file global; else _layer_file local; fi
 }
 
-# every resolved key; choices for get and set, described by value when completing
+# every resolved key, only --module's own if given; choices for get and set,
+# described by value when completing
 _choice_key() {
-    if [[ ${ARGC_COMPGEN:-0} == 1 ]]; then _resolve | cut -f1,2 | tr "$SEP" ' '; else _resolve | cut -f1; fi
+    local keys
+    keys="$(_resolve | awk -F'\t' -v m="${argc_module:-}" 'm == "" || index($1, m ".") == 1')"
+    if [[ ${ARGC_COMPGEN:-0} == 1 ]]; then cut -f1,2 <<<"$keys" | tr "$SEP" ' '; else cut -f1 <<<"$keys"; fi
 }
 
 # keys present in the layer set/unset write to; choices for unset

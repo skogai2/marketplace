@@ -15,7 +15,7 @@ it; the files it works with and its config defaults are the rest.
   argc.sh          optional: the command, named by `command:`
   templates/ ...   optional: anything it offers, named by `files:`
   tests/*.bats     its own tests; not offered unless listed in `files:`
-  module.local.md  installed copies only: local overrides, never shipped
+  module.local.md  local overrides, never shipped
 ```
 
 the directory name is the module name.
@@ -99,13 +99,14 @@ a module's keys live under its name. the layers, later wins:
 1. `config:` in every found `module.md` (defaults)
 2. system, global, local: git-config files `config` in `/etc/skogai`,
    `~/.config/skogai`, `.skogai`
-3. `config:` in each installed module's `module.local.md`
+3. `config:` in each module's `module.local.md`
 4. `--file` layers (`skogai config` only)
 5. `SKOGAI_*` env
 
-`skogai config set --module <name> <name>.<key> <value>` writes an installed
-module's `module.local.md`; `skogai config get <key> --show-origin` says which
-layer won.
+`skogai config set --module <name> <name>.<key> <value>` writes a module's
+`module.local.md`: beside an installed copy's `module.md`, and for a source
+module in `.skogai/modules/<name>/`, never into the source.
+`skogai config get <key> --show-origin` says which layer won.
 
 ## skogai
 

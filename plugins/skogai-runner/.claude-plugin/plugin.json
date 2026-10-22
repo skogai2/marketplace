@@ -1,6 +1,6 @@
 {
   "name": "skogai-runner",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "skogai modules: argc commands packaged with their files and config, run as `skogai <module>`; core, memory and runner (typed agent io)",
   "author": {
     "name": "skogix"
