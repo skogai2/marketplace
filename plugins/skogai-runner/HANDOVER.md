@@ -10,7 +10,7 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 - `Argcfile.sh`: recipes, all built on `send :: (prompt, [file], schema) -> json` (`claude -p --json-schema`, read `.structured_output`).
 - `plugins/skogai-runner/`: skill `argc` (how to use and extend the runner) and schemas `answer`, `edit`, `check`.
-- `workorders/smoke-test.*`: a worked example, a workorder and its typed result.
+- `.skogai/workorders/smoke-test.*`: a worked example, a workorder and its typed result.
 - `TODO.md`: what's needed before it runs here.
 
 usage is in `plugins/skogai-runner/skills/argc/SKILL.md`, and `argc --help` is the source of truth.
