@@ -242,3 +242,15 @@ SH
     run skogai module sandbox "$BATS_TEST_TMPDIR/other"
     assert_status 2
 }
+
+@test "module sandbox: run runs one command inside it, state kept between runs" {
+    S="$BATS_TEST_TMPDIR/sb"
+    skogai module sandbox "$S" >/dev/null 2>&1
+    run env SKOGAI_RUNNER_MODEL=leak "$S/run" skogai config get runner.model --show-origin
+    assert_output_has "module:runner"
+    run "$S/run" pwd
+    assert_output_has "$S/repo"
+    "$S/run" skogai config set core.module.install global
+    run "$S/run" skogai config get core.module.install --show-origin
+    assert_output_has "local	global"
+}

@@ -135,8 +135,11 @@ module in `.skogai/modules/<name>/`, never into the source.
   (from its source when it has one) and `skogai` built there. it prints the
   env lines that switch a shell into it (`eval "$(skogai module sandbox)"`,
   fish `skogai module sandbox | source`): no `SKOGAI_*` config from outside,
-  the three layer dirs, the built `skogai` on `PATH`, `cd repo`. rerunning
-  replaces it; a dir it did not make is refused.
+  the three layer dirs, the built `skogai` on `PATH`, `cd repo`. it also
+  writes `<dir>/run`, the same switch for one command (`/tmp/skogai/run
+  skogai memory ls`, a shell with none), for callers whose env does not
+  persist between commands, like an agent's Bash tool. rerunning replaces
+  it; a dir it did not make is refused.
 
 ## the command
 

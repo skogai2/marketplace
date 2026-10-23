@@ -290,6 +290,8 @@ module::sandbox() {
         sandboxed module add "$src" --to local --apply >/dev/null
     done < <(_modules)
     lines="$(sandboxed module build --to local --shell "$shell")"
+    _sandbox_run "$dir" >"$dir/run"
+    chmod +x "$dir/run"
     for v in $(compgen -e SKOGAI_); do
         case "$v" in SKOGAI_BIN | SKOGAI_MODULE_PATH | SKOGAI_SYSTEM_DIR | SKOGAI_CONFIG_DIR | SKOGAI_LOCAL_DIR) continue ;; esac
         if [[ $shell == fish ]]; then echo "set -e $v"; else echo "unset $v"; fi
@@ -303,6 +305,19 @@ module::sandbox() {
     done
     echo "$lines"
     printf 'cd %q\n' "$dir/repo"
+}
+
+# <dir>/run of a sandbox: the same switch for one command, for callers whose
+# env does not persist between commands
+# shellcheck disable=SC2016 # generated code, expanded when it runs
+_sandbox_run() {
+    local b="$1/repo/.skogai/tmp/skogai"
+    printf '#!/usr/bin/env bash\n# run <cmd>... in the sandbox %s, a shell if none; made by skogai module sandbox\n' "$1"
+    printf 'for v in $(compgen -e SKOGAI_); do unset "$v"; done\n'
+    printf 'export SKOGAI_SYSTEM_DIR=%q SKOGAI_CONFIG_DIR=%q SKOGAI_LOCAL_DIR=%q\n' "$1/system" "$1/global" "$1/repo/.skogai"
+    printf 'export PATH=%q:"$PATH" MANPATH=%q:"${MANPATH:-}" ARGC_COMPLETIONS_PATH=%q:"${ARGC_COMPLETIONS_PATH:-}"\n' "$b/bin" "$b/man" "$b/completions"
+    printf 'cd %q || exit 2\n' "$1/repo"
+    printf 'exec "${@:-${SHELL:-bash}}"\n'
 }
 
 # @cmd check modules against the spec (docs/module.md), all found ones if none given
