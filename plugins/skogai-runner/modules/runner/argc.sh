@@ -123,12 +123,13 @@ wo::new() {
 # fresh `skogai module sandbox` at .skogai/tmp/sandbox/<name>: its cwd is the
 # sandbox repo, its skogai config is the sandbox's, every module found from
 # here is installed there. the sandbox is kept for a look afterwards.
-# @arg workorder![`_choice_workorder`] name or path
+# @arg workorder![?`_choice_workorder`] name or path
 # @option -m --model                   model, default the workorder's or runner.model
 # @flag      --sandbox                 run the worker in a sandbox
 wo::run() {
     local path
     path="$(_workorder_path "$argc_workorder")"
+    [[ -f $path ]] || { echo "no workorder: $argc_workorder" >&2; return 2; }
     local fm
     fm="$(yq --front-matter=extract -o json '.' "$path")"
     [[ "$(jq -r '.type' <<<"$fm")" == workorder ]] || { echo "not a workorder: $path" >&2; return 2; }
@@ -206,6 +207,7 @@ journal::harvest() {
     trap 'rm -rf "$dir"' RETURN
     _journal_slice "$file" "${argc_last:-0}" |
         awk -v per="$per" -v dir="$dir" '/^## [0-9]{4}-/ && n++ % per == 0 { out = sprintf("%s/%03d.md", dir, n / per) } out { print > out }'
+    compgen -G "$dir/*.md" >/dev/null || { echo "no turns in $file" >&2; echo '[]'; return 0; }
 
     local prompt
     prompt="$(cat <<'EOF'
@@ -255,13 +257,22 @@ _agent() {
     # claude exits 1 on agent errors; the envelope says why, so read it below
     "${RUN_IN[@]}" claude "${args[@]}" >"$log" || true
 
+    # nothing, or not json: claude never got to the agent (not logged in, crashed)
+    jq -e 'type == "object"' "$log" >/dev/null 2>&1 ||
+        { echo "no result envelope from claude: $(head -c 200 "$log")" >&2; echo "log: $log" >&2; return 1; }
     if [[ -n "$raw" ]]; then cat "$log"; fi
     if [[ "$(jq -r '.is_error' "$log")" == true ]]; then
         jq -r '.result // .subtype' "$log" >&2
         return 1
     fi
     [[ -n "$raw" ]] && return 0
-    if [[ -n "$schema" ]]; then jq '.structured_output' "$log"; else jq -r '.result' "$log"; fi
+    if [[ -n "$schema" ]]; then
+        jq -e '.structured_output | type == "object"' "$log" >/dev/null ||
+            { echo "no structured output for schema $schema, log: $log" >&2; return 1; }
+        jq '.structured_output' "$log"
+    else
+        jq -r '.result' "$log"
+    fi
 }
 
 # edit json + allowed files -> unified diff, refusing paths outside the list
@@ -285,7 +296,7 @@ _journal_slice() {
     local file="$1" n="$2"
     [[ -f "$file" ]] || { echo "no such journal: $file" >&2; return 2; }
     local total
-    total="$(grep -c '^## [0-9]\{4\}-' "$file")"
+    total="$(grep -c '^## [0-9]\{4\}-' "$file" || true)"
     awk -v skip=$((n > 0 && total > n ? total - n : 0)) '/^## [0-9]{4}-/ { i++ } i > skip' "$file"
 }
 
