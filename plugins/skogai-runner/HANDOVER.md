@@ -31,7 +31,7 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 ## verified
 
-- `skogai module test` from the marketplace repo: core 29, runner 19, memory 15 (marketplace module currently deleted in the working tree), bats 1.14 via mise. runner tests stub `claude`.
+- `skogai module test` from the marketplace repo: core 45, runner 36, memory 17, bats 1.14 via mise. runner tests stub `claude`. the `marketplace` workflow's `modules` job and the pre-commit hook run them; the workflow job has not run on GitHub yet.
 - a fresh `module new` scaffold passes the contract and its own test.
 - `skogai module sandbox`: eval in bash and source in fish give a shell where every module is `local` in `/tmp/skogai/repo` and `skogai` is the sandbox build.
 - `wo run` with `sandbox: true`, `tools: Bash` and `allow:` against haiku: the worker ran `pwd` and `skogai module ls` in its own sandbox (from inside `/tmp/skogai/run`, since the global runner copy shadows the source).
