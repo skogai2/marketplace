@@ -15,7 +15,7 @@ FS=$'\x1f'
 # @cmd every entry: stale_after, name, description; `!` marks one that is due (expired, or no stale_after)
 ls() {
     local name stale desc
-    while IFS="$FS" read -r name stale desc; do
+    while IFS="$FS" read -r name stale desc _; do
         printf '%s %-10s %-36s %s\n' "$([[ $stale == none || $stale < $(date +%F) ]] && echo '!' || echo ' ')" "$stale" "$name" "$desc"
     done < <(_entries)
 }
@@ -24,7 +24,7 @@ ls() {
 stale() {
     local today out
     today="$(date +%F)"
-    out="$(_entries | awk -F"$FS" -v OFS='\t' -v t="$today" '$2 == "none" || $2 < t { $1 = $1; print }' | sort -t$'\t' -k2)"
+    out="$(_entries | awk -F"$FS" -v OFS='\t' -v t="$today" '$2 == "none" || $2 < t { print $1, $2, $3 }' | sort -t$'\t' -k2)"
     [[ -n $out ]] || return 0
     printf '%s\n' "$out"
     return 1
@@ -54,9 +54,9 @@ new() {
 # --apply appends the missing lines; dead links are only reported.
 # @flag --apply  append the missing lines to the index
 index() {
-    local name stale desc missing=() rc=0 link
-    while IFS="$FS" read -r name stale desc; do
-        grep -qF "($name.md)" "$INDEX" 2>/dev/null || missing+=("* [$name]($name.md) - $desc")
+    local name stale desc file missing=() rc=0 link
+    while IFS="$FS" read -r name stale desc file; do
+        grep -qF "($file)" "$INDEX" 2>/dev/null || missing+=("* [$name]($file) - $desc")
     done < <(_entries)
     while IFS= read -r link; do
         [[ -f $DIR/$link ]] || { echo "dead link: $link" >&2; rc=1; }
@@ -71,12 +71,14 @@ index() {
     return 1
 }
 
-# "name FS stale_after FS description" per entry, the index excluded; a missing stale_after is `none`
+# "name FS stale_after FS description FS file" per entry, the index excluded;
+# a missing stale_after is `none`, file is the entry's file name in the dir
 _entries() {
     local f
     for f in "$DIR"/*.md; do
         [[ -f $f && $f != "$INDEX" ]] || continue
-        FS="$FS" yq --front-matter=extract -r '[.name // "", .stale_after // .metadata.stale_after // "none", .description // ""] | join(strenv(FS))' "$f"
+        FS="$FS" yq --front-matter=extract -r '[.name // "", .stale_after // .metadata.stale_after // "none", .description // ""] | join(strenv(FS))' "$f" | tr -d '\n'
+        printf '%s%s\n' "$FS" "$(basename "$f")"
     done
 }
 
