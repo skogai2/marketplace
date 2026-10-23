@@ -254,3 +254,206 @@ SH
     run "$S/run" skogai config get core.module.install --show-origin
     assert_output_has "local	global"
 }
+
+@test "config: unset removes a key from its layer, a missing one exits 1" {
+    skogai config set some.key v
+    skogai config set --global some.key g
+    skogai config unset some.key
+    run skogai config get some.key --show-origin
+    assert_output_has "global	g"
+    skogai config unset --global some.key
+    run skogai config get some.key
+    assert_status 1
+    run skogai config unset some.key
+    assert_status 1
+}
+
+@test "config: unset --module drops the override, the default is back" {
+    skogai config set --module core core.module.install global
+    skogai config unset --module core core.module.install
+    run skogai config get core.module.install --show-origin
+    assert_output_has "module:core	local"
+}
+
+@test "config: a null in module.local.md removes the default" {
+    skogai config set --module core core.module.install null
+    run skogai config get core.module.install
+    assert_status 1
+}
+
+@test "config: list and env print every resolved key" {
+    skogai config set some.key v
+    run skogai config list --show-origin
+    assert_status 0
+    assert_output_has "local	some.key=v"
+    assert_output_has "module:core	core.module.install=local"
+    run skogai config env
+    assert_output_has "export SKOGAI_SOME_KEY=v"
+    assert_output_has "export SKOGAI_CORE_MODULE_INSTALL=local"
+}
+
+@test "config: a list default is one key, one item per line" {
+    fixture tagged <<'MD'
+---
+type: module
+name: tagged
+description: has a list default
+requires: [core]
+config:
+  tags: [a, b]
+---
+MD
+    run skogai config get tagged.tags
+    assert_status 0
+    [[ $output == $'a\nb' ]]
+    run skogai config list
+    assert_output_has $'tagged.tags=a\ntagged.tags=b'
+    run skogai module env tagged
+    assert_output_has "export SKOGAI_TAGGED_TAGS=$'a\\nb'"
+}
+
+@test "config: --file is a layer with its .local.md after it, --scope mounts it" {
+    printf -- '---\nsection:\n  key: fromfile\n---\nbody\n' >x.md
+    run skogai config get section.key --file x.md --show-origin
+    assert_output_has "file:x.md	fromfile"
+    skogai config set --file x.md section.key fromlocal
+    run skogai config get section.key --file x.md --show-origin
+    assert_output_has "file:x.local.md	fromlocal"
+    [[ $(tail -1 x.md) == body ]]
+    run skogai config get s.section.key --file x.md --scope s
+    assert_output_has fromlocal
+    run skogai config set --file x.md --scope s other.key v
+    assert_status 2
+}
+
+@test "config: files lists every layer and whether it is there" {
+    skogai config set some.key v
+    run skogai config files
+    assert_status 0
+    assert_output_has "local	$LOCAL/config	present"
+    assert_output_has "global	$SKOGAI_CONFIG_DIR/config	missing"
+    assert_output_has "system	$SKOGAI_SYSTEM_DIR/config	missing"
+}
+
+@test "local dir: the git root's .skogai from a subdir, pwd's outside git" {
+    mkdir -p sub/deeper
+    (cd sub/deeper && skogai config set some.key v)
+    assert_file "$LOCAL/config"
+    run bash -c 'cd sub && "$SKOGAI_BIN" module env memory'
+    assert_output_has "export SKOGAI_LOCAL_DIR=$LOCAL"
+    mkdir "$BATS_TEST_TMPDIR/nogit"
+    cd "$BATS_TEST_TMPDIR/nogit"
+    run skogai module env memory
+    assert_output_has "export SKOGAI_LOCAL_DIR=$BATS_TEST_TMPDIR/nogit/.skogai"
+}
+
+@test "dispatch: an unknown command fails and names the known ones" {
+    run skogai nosuch
+    [[ $status -ne 0 ]]
+    assert_output_has "subcommands: config, module"
+}
+
+@test "module show and command: where it is, its manifest, its argc script" {
+    run skogai module show memory
+    assert_status 0
+    [[ ${lines[0]} == source$'\t'*/memory ]]
+    assert_output_has "name: memory"
+    run skogai module command memory
+    [[ $output == */memory/argc.sh ]]
+    fixture bare <<<$'---\ntype: module\nname: bare\ndescription: no command\nrequires: [core]\n---'
+    run skogai module command bare
+    assert_status 1
+    run skogai module show nosuch
+    assert_status 1
+}
+
+@test "module diff: an unchanged copy is exit 0, one without a source is exit 2" {
+    skogai module add core --apply >/dev/null 2>&1
+    run skogai module diff core
+    assert_status 0
+    [[ -z $output ]]
+    fixture gone <<<$'---\ntype: module\nname: gone\ndescription: x\nrequires: [core]\n---'
+    skogai module add "$FIX/gone" --apply >/dev/null 2>&1
+    rm -rf "$FIX/gone"
+    run skogai module diff gone
+    assert_status 2
+}
+
+@test "module add: the installed copy itself is already installed, exit 0" {
+    skogai module add core --apply >/dev/null 2>&1
+    run skogai module add "$LOCAL/modules/core"
+    assert_status 0
+    assert_output_has "already installed"
+}
+
+@test "module add: only module.md, the command and files: are copied" {
+    fixture shipped <<<$'---\ntype: module\nname: shipped\ndescription: x\nrequires: [core]\nfiles: [templates/]\n---'
+    mkdir -p "$FIX/shipped/templates/sub" "$FIX/shipped/tests"
+    touch "$FIX/shipped/templates/sub/t.md" "$FIX/shipped/tests/shipped.bats" "$FIX/shipped/notes.md"
+    skogai module add shipped --apply >/dev/null 2>&1
+    assert_file "$LOCAL/modules/shipped/templates/sub/t.md"
+    [[ ! -e $LOCAL/modules/shipped/tests && ! -e $LOCAL/modules/shipped/notes.md ]]
+}
+
+@test "module check: the rest of the spec problems" {
+    fixture worse <<'MD'
+---
+type: thing
+name: worse
+description: |
+  two
+  lines
+command: argc.sh
+files: [gone.txt]
+config: [1]
+requires: [core]
+---
+MD
+    printf '#!/usr/bin/env bash\n# @cmd\n# @option --x[`\nfoo() { :; }\n' >"$FIX/worse/argc.sh"
+    fixture help <<<$'---\ntype: module\nname: help\ndescription: x\nrequires: [core]\n---'
+    fixture plain <<<'# no frontmatter'
+    run skogai module check "$FIX/worse" "$FIX/help" "$FIX/plain"
+    assert_status 1
+    assert_output_has "worse	error	type is not module"
+    assert_output_has "worse	error	description is not one line"
+    assert_output_has "worse	error	command argc.sh does not parse with argc"
+    assert_output_has "worse	error	file gone.txt is missing"
+    assert_output_has "worse	error	config is not a map"
+    assert_output_has "worse	warn	no tests/*.bats"
+    assert_output_has "help	error	name is reserved"
+    assert_output_has "plain	error	module.md has no frontmatter map"
+}
+
+@test "module test: a failing test fails the run, --filter picks tests, an unknown module fails" {
+    fixture flaky <<<$'---\ntype: module\nname: flaky\ndescription: one test fails\nrequires: [core]\n---'
+    mkdir "$FIX/flaky/tests"
+    cat >"$FIX/flaky/tests/flaky.bats" <<'BATS'
+load "$SKOGAI_TEST_HELPER"
+@test "flaky: passes" { true; }
+@test "flaky: fails" { false; }
+BATS
+    run skogai module test flaky
+    assert_status 1
+    assert_output_has "not ok"
+    assert_output_has "flaky: fails"
+    run skogai module test flaky --filter "^flaky: passes"
+    assert_status 0
+    refute_output_has "contract:"
+    run skogai module test nosuch
+    assert_status 1
+    assert_output_has "invalid value `nosuch`"
+}
+
+@test "hook: SessionStart builds into the global dir, only env lines into CLAUDE_ENV_FILE" {
+    local root cmd
+    root="$(dirname "$(dirname "$SKOGAI_BIN")")"
+    cmd="$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$root/hooks/hooks.json")"
+    CLAUDE_PLUGIN_ROOT="$root" bash -c "$cmd"
+    [[ ! -e $SKOGAI_CONFIG_DIR/tmp/skogai ]]
+    CLAUDE_PLUGIN_ROOT="$root" CLAUDE_ENV_FILE="$BATS_TEST_TMPDIR/env" bash -c "$cmd"
+    assert_file "$SKOGAI_CONFIG_DIR/tmp/skogai/bin/skogai"
+    run cat "$BATS_TEST_TMPDIR/env"
+    assert_output_has "export PATH=$SKOGAI_CONFIG_DIR/tmp/skogai/bin:"
+    refute_output_has "source "
+    [[ $(grep -cv '^export ' "$BATS_TEST_TMPDIR/env") == 0 ]]
+}

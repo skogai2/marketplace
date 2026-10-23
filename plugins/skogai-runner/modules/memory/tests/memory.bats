@@ -80,3 +80,23 @@ entry() { printf -- '---\nname: %s\ndescription: %s\nstale_after: %s\n---\n' "$1
     assert_output_has there
     refute_output_has fresh
 }
+
+@test "memory index: links the file, whatever the entry's name" {
+    rm "$MEM"/{old,nested,undated}.md
+    printf -- '---\nname: Tabs Rule\ndescription: use tabs\nstale_after: 2999-01-01\n---\n' >"$MEM/tabs.md"
+    run skogai memory index --apply
+    assert_output_has "* [Tabs Rule](tabs.md) - use tabs"
+    run skogai memory index
+    assert_status 0
+}
+
+@test "memory index: a missing index is every entry, --apply writes it" {
+    rm "$MEM/MEMORY.md"
+    run skogai memory index
+    assert_status 1
+    assert_output_has "(fresh.md)"
+    skogai memory index --apply 2>/dev/null
+    assert_file "$MEM/MEMORY.md"
+    run skogai memory index
+    assert_status 0
+}

@@ -22,16 +22,19 @@ load "$SKOGAI_TEST_HELPER"
     cmd="$(module_dir)/$(module_field .command)"
     run argc --argc-run "$cmd" "$(argc --argc-export "$cmd" | yq -p json '.subcommands[0].name')"
     [[ $status -ne 0 ]]
+    assert_output_has "run me as"
 }
 
 @test "contract: config defaults resolve under its name" {
-    local key
+    local keys key
+    # leaves, a list being one leaf; the assignment fails the test if yq does
+    keys="$(yq --front-matter=extract '.config // {} | .. | select(tag == "!!seq" or (tag != "!!map" and (parent | tag) != "!!seq")) | path | .[1:] | join(".")' "$(module_dir)/module.md")"
     while IFS= read -r key; do
         [[ -n $key ]] || continue
         run skogai config get "$SKOGAI_TEST_MODULE.$key" --show-origin
         assert_status 0
         assert_output_has "module:$SKOGAI_TEST_MODULE"
-    done < <(yq --front-matter=extract '.config // {} | .. | select(tag != "!!map") | path | .[1:] | join(".")' "$(module_dir)/module.md")
+    done <<<"$keys"
 }
 
 @test "contract: module env names it and its dir" {
