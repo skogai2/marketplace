@@ -31,8 +31,9 @@ skogix's words: "you will be the one writing context, your intentions and will b
 
 ## verified
 
-- `skogai module test` from the marketplace repo: 64 tests (core 25, runner 15, memory 15, marketplace 9), bats 1.14 via mise. runner tests stub `claude`.
+- `skogai module test` from the marketplace repo: core 35, runner 15, memory 15 (marketplace module currently deleted in the working tree), bats 1.14 via mise. runner tests stub `claude`.
 - a fresh `module new` scaffold passes the contract and its own test.
+- `skogai module sandbox`: eval in bash and source in fish give a shell where every module is `local` in `/tmp/skogai/repo` and `skogai` is the sandbox build.
 - the built `skogai`: help, runs, completion (including module choices like runner's schemas) through `ARGC_COMPLETIONS_PATH`, man pages.
 - `skogai memory ls/stale/index` read-only against `~/skogai`; `skogai marketplace check` against this repo.
 - earlier, with the pre-module runner: `send -s answer`, `wo run -s check`, and `improve` producing a patch (2 of 3 hunks right, one inverted an exit code). **review patches, don't blind `--apply`.**

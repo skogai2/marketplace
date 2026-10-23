@@ -253,6 +253,58 @@ module::build() {
     esac
 }
 
+# @cmd an empty skogai to try things in: own layers, every module installed, skogai built
+#
+# makes <dir>/system and <dir>/global (the system and global layers) and a
+# git repo <dir>/repo, installs every module found from here into its
+# .skogai/modules (as `module add --apply` would, from its source when it has
+# one, else from where it was found) and builds skogai there.
+# prints the env lines that switch a shell into it: no SKOGAI_* config from
+# outside, the three layer dirs, the built skogai first on PATH, cd to repo.
+# a dir made by an earlier sandbox is replaced; any other existing one is refused.
+# @arg dir  default $TMPDIR/skogai
+# @option --shell[bash|zsh|fish]  env lines for this shell, default from $SHELL
+module::sandbox() {
+    : "${SKOGAI_BIN:?run me as skogai module sandbox}"
+    local dir shell name src v lines
+    dir="${argc_dir:-${TMPDIR:-/tmp}/skogai}"
+    [[ $dir == /* ]] || dir="${ARGC_PWD:-$PWD}/$dir"
+    if [[ -f $dir/.sandbox ]]; then
+        rm -rf "$dir"
+    elif [[ -e $dir ]]; then
+        echo "exists and is not a sandbox: $dir" >&2
+        exit 2
+    fi
+    mkdir -p "$dir/system" "$dir/global" "$dir/repo"
+    touch "$dir/.sandbox"
+    git -C "$dir/repo" init -q
+    shell="${argc_shell:-$(basename "${SHELL:-bash}")}"
+    # every run below sees only the sandbox's layers
+    sandboxed() {
+        (cd "$dir/repo" && SKOGAI_SYSTEM_DIR="$dir/system" SKOGAI_CONFIG_DIR="$dir/global" \
+            SKOGAI_LOCAL_DIR="$dir/repo/.skogai" "$SKOGAI_BIN" "$@")
+    }
+    local found
+    while IFS=$'\t' read -r name _ found; do
+        src="$(_source "$name")" || src="$found"
+        sandboxed module add "$src" --to local --apply >/dev/null
+    done < <(_modules)
+    lines="$(sandboxed module build --to local --shell "$shell")"
+    for v in $(compgen -e SKOGAI_); do
+        case "$v" in SKOGAI_BIN | SKOGAI_MODULE_PATH | SKOGAI_SYSTEM_DIR | SKOGAI_CONFIG_DIR | SKOGAI_LOCAL_DIR) continue ;; esac
+        if [[ $shell == fish ]]; then echo "set -e $v"; else echo "unset $v"; fi
+    done
+    for v in SYSTEM_DIR:system CONFIG_DIR:global LOCAL_DIR:repo/.skogai; do
+        if [[ $shell == fish ]]; then
+            printf 'set -gx SKOGAI_%s %q\n' "${v%%:*}" "$dir/${v#*:}"
+        else
+            printf 'export SKOGAI_%s=%q\n' "${v%%:*}" "$dir/${v#*:}"
+        fi
+    done
+    echo "$lines"
+    printf 'cd %q\n' "$dir/repo"
+}
+
 # @cmd check modules against the spec (docs/module.md), all found ones if none given
 #
 # one line per problem: name, error or warn, message. exit 1 on any error;

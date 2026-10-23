@@ -211,3 +211,34 @@ SH
     assert_output_has "fish_add_path --prepend $SKOGAI_CONFIG_DIR/tmp/skogai/bin"
     assert_file "$SKOGAI_CONFIG_DIR/tmp/skogai/bin/skogai"
 }
+
+@test "module sandbox: every module installed, skogai built, env lines into it" {
+    fixture lonely <<<$'---\ntype: module\nname: lonely\ndescription: only found, no command\nrequires: [core]\n---'
+    skogai module add "$FIX/lonely" --to global --apply >/dev/null 2>&1
+    rm -rf "$FIX/lonely"
+    S="$BATS_TEST_TMPDIR/sb"
+    run --separate-stderr skogai module sandbox "$S" --shell bash
+    assert_status 0
+    assert_output_has "export SKOGAI_CONFIG_DIR=$S/global"
+    assert_output_has "export SKOGAI_LOCAL_DIR=$S/repo/.skogai"
+    assert_output_has "export PATH=$S/repo/.skogai/tmp/skogai/bin:"
+    assert_output_has "cd $S/repo"
+    assert_file "$S/repo/.skogai/modules/memory/module.md"
+    assert_file "$S/repo/.skogai/modules/lonely/module.md"
+    eval "$output"
+    run skogai module ls
+    assert_output_has "memory       local"
+    refute_output_has source
+}
+
+@test "module sandbox: replaces an earlier sandbox, refuses any other dir" {
+    S="$BATS_TEST_TMPDIR/sb"
+    skogai module sandbox "$S" >/dev/null 2>&1
+    touch "$S/repo/leftover"
+    run skogai module sandbox "$S"
+    assert_status 0
+    [[ ! -e $S/repo/leftover ]]
+    mkdir -p "$BATS_TEST_TMPDIR/other"
+    run skogai module sandbox "$BATS_TEST_TMPDIR/other"
+    assert_status 2
+}

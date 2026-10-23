@@ -129,6 +129,14 @@ module in `.skogai/modules/<name>/`, never into the source.
   `PATH`, `MANPATH` and `ARGC_COMPLETIONS_PATH`; putting them in a shell, a
   `.envrc` or mise is up to the user. the first build runs the checkout's
   `bin/skogai` by path.
+- `skogai module sandbox [dir]` (default `$TMPDIR/skogai`) is an empty
+  skogai to try things in: `system/` and `global/` layers, a git repo
+  `repo/` with every module found from here installed in its `.skogai/modules`
+  (from its source when it has one) and `skogai` built there. it prints the
+  env lines that switch a shell into it (`eval "$(skogai module sandbox)"`,
+  fish `skogai module sandbox | source`): no `SKOGAI_*` config from outside,
+  the three layer dirs, the built `skogai` on `PATH`, `cd repo`. rerunning
+  replaces it; a dir it did not make is refused.
 
 ## the command
 

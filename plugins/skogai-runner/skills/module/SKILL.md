@@ -17,6 +17,7 @@ changing a module. `modules/memory` is the worked example.
 - `skogai <name> --help` is the source of truth for a module's recipes.
 - `skogai config get <name>.<key> --show-origin`: a setting and the layer it came from.
 - a shell gets `skogai` from `skogai module build`: it prints the `PATH`, `MANPATH` and `ARGC_COMPLETIONS_PATH` lines; give them to the user, don't write them into their shell config.
+- to try modules installed, away from real config: `skogai module sandbox [dir]` installs every module into a throwaway repo with its own layers and prints the env lines to switch into it.
 - installing is an offer: `skogai module add <name>` prints the plan and exits `1`; only `--apply` copies. never overwrite a `keep` file; show `skogai module diff <name>` instead.
 
 ## creating
