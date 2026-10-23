@@ -15,6 +15,7 @@ it; the files it works with and its config defaults are the rest.
   argc.sh          optional: the command, named by `command:`
   templates/ ...   optional: anything it offers, named by `files:`
   tests/*.bats     its own tests; not offered unless listed in `files:`
+  tests/fixtures/  examples its schemas are held to (with `type`)
   module.local.md  local overrides, never shipped
 ```
 
@@ -183,6 +184,12 @@ bats. `skogai module test [name]...` runs, for each module:
    that has one, with `SKOGAI_TEST_MODULE` still the module under test.
 2. its own `tests/*.bats`, from its source when it has one; its own
    `tests/contract.bats` is what it holds others to, not run against itself.
+
+a module that requires `type` ships fixtures for each `schema/<x>.json` it
+offers: `tests/fixtures/<x>/valid/*` and `tests/fixtures/<x>/invalid/*`, both
+non-empty, in its source only (not in `files:`). type's contract checks every
+valid one passes and every invalid one fails, the way `skogai type check`
+checks instances (`skogai type check --schema <module>.<x> <file>...`).
 
 a test file starts with `load "$SKOGAI_TEST_HELPER"` (core's
 `tests/helper.bash`). every test then runs in an empty git repo

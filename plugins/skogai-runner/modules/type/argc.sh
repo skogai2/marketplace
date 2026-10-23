@@ -3,34 +3,49 @@
 #
 # a module that requires type offers schema/<x>.json and globs its instances
 # with config <module>.schema.<x>, relative to the local dir; `<key>` in the
-# glob is the module's own resolved <module>.<key>.
+# glob is the module's own resolved <module>.<key>. globs are bash, with
+# globstar and extglob: `<dir>/!(<index>)`.
 # @meta require-tools yq,ajv
 # @meta binname skogai type
 
 # shellcheck disable=SC2154 # argc_* are assigned by --argc-eval, SKOGAI_* by `skogai module env`
 set -euo pipefail
-shopt -s globstar
+shopt -s globstar extglob nullglob
 
 : "${SKOGAI_MODULE_DIR:?run me as \`skogai type\`}"
 AJV=(--spec=draft2020 --strict=true)
 # field separator of _schemas: not whitespace, so an empty field survives `read`
 FS=$'\x1f'
 
-# @cmd every instance against its schema; one line per problem: module<TAB>path<TAB>message
+# @cmd every instance against its schema; one line per file with problems: module<TAB>path<TAB>message
 #
 # exit 1 on any problem: an instance that does not match, frontmatter that
 # does not parse, a schema that does not compile, a schema with no glob.
-# @arg module*[`_choice_typed`]  default every module that requires type
+# a file's problems are joined with `; `. with --schema the arguments are
+# files, checked against that schema instead of its glob.
+# @option --schema  <module>.<x>: check the given files against <module>'s schema/<x>.json
+# @arg target*[?`_choice_typed`]  modules, default every module that requires type; files with --schema
 check() {
-    local m schema glob problem f rc=0 tmp
+    local m x dir schema glob problem f rc=0 tmp
     tmp="$(mktemp -d)"
     trap 'rm -rf "$tmp"' RETURN
+    if [[ -n ${argc_schema:-} ]]; then
+        [[ $argc_schema == ?*.?* ]] || { echo "bad --schema: $argc_schema, want <module>.<x>" >&2; return 2; }
+        m="${argc_schema%%.*}" x="${argc_schema#*.}"
+        dir="$(_dir "$m")" || { echo "no module: $m" >&2; return 2; }
+        schema="$dir/schema/$x.json"
+        [[ -f $schema ]] || { echo "no schema: $schema" >&2; return 2; }
+        for f in "${argc_target[@]}"; do
+            _validate "$m" "$schema" "$f" "$tmp/data.json" || rc=1
+        done
+        return "$rc"
+    fi
     while IFS="$FS" read -r m schema glob problem; do
         [[ -z $problem ]] || { printf '%s\t%s\t%s\n' "$m" "$schema" "$problem"; rc=1; continue; }
         while IFS= read -r f; do
             _validate "$m" "$schema" "$f" "$tmp/data.json" || rc=1
         done < <(_instances "$glob")
-    done < <(_schemas)
+    done < <(_schemas "${argc_target[@]}")
     return "$rc"
 }
 
@@ -43,14 +58,15 @@ ls() {
     while IFS="$FS" read -r m schema glob problem; do
         [[ -z $problem ]] || { printf '%s\t%s\t%s\n' "$m" "$schema" "$problem" >&2; rc=1; continue; }
         printf '%s\t%s\t%s\t%s\n' "$m" "$(basename "$schema" .json)" "$glob" "$(_instances "$glob" | grep -c . || true)"
-    done < <(_schemas)
+    done < <(_schemas "${argc_module[@]}")
     return "$rc"
 }
 
 # "module FS schema path FS filled glob FS problem" for each schema of the
-# given modules, the problem empty unless there is no glob
+# given modules ($@, default every one that requires type), the problem
+# empty unless there is no glob
 _schemas() {
-    local m dir schema x glob mods=("${argc_module[@]}")
+    local m dir schema x glob mods=("$@")
     [[ ${#mods[@]} -gt 0 ]] || mapfile -t mods < <(_typed)
     for m in "${mods[@]}"; do
         dir="$(_dir "$m")" || { printf '%s\x1f-\x1f\x1fno module\n' "$m"; continue; }
@@ -80,26 +96,30 @@ _fill() {
     echo "$out$rest"
 }
 
-# files the glob matches, relative to the local dir, sorted
+# files the glob matches in the local dir, as paths under it
 _instances() {
-    local f
-    while IFS= read -r f; do
-        [[ -f $f ]] && echo "$f"
-    done < <(compgen -G "$SKOGAI_LOCAL_DIR/$1" | sort || true)
+    local f IFS=
+    [[ -d $SKOGAI_LOCAL_DIR ]] || return 0
+    cd "$SKOGAI_LOCAL_DIR"
+    # shellcheck disable=SC2231 # the glob is config, unquoted on purpose; IFS is empty
+    for f in $1; do
+        [[ -f $f ]] && echo "$SKOGAI_LOCAL_DIR/$f"
+    done
+    return 0
 }
 
-# one instance's frontmatter against a schema, problems as lines
+# one instance's frontmatter against a schema; its problems, deduped and
+# joined with `; `, on one line
 _validate() {
-    local m="$1" schema="$2" f="$3" json="$4" err line
+    local m="$1" schema="$2" f="$3" json="$4" err msg
     if ! err="$(yq --front-matter=extract -o json 'select(document_index == 0)' "$f" 2>&1 >"$json")"; then
         printf '%s\t%s\tfrontmatter: %s\n' "$m" "$f" "${err//$'\n'/ }"
         return 1
     fi
     err="$(ajv validate "${AJV[@]}" --all-errors --errors=json -s "$schema" -d "$json" 2>&1 >/dev/null)" && return 0
-    while IFS= read -r line; do
-        printf '%s\t%s\t%s\n' "$m" "$f" "$line"
-    done < <(tail -n +2 <<<"$err" | yq -p json '.[] | (.instancePath + " " + .message) | sub("^ "; "")' 2>/dev/null ||
-        tr '\n' ' ' <<<"$err" | sed 's/ *$/\n/')
+    msg="$(tail -n +2 <<<"$err" | yq -p json '[.[] | (.instancePath + " " + .message) | sub("^ "; "")] | unique | join("; ")' 2>/dev/null)" ||
+        msg="$(tr '\n' ' ' <<<"$err" | sed 's/ *$//')"
+    printf '%s\t%s\t%s\n' "$m" "$f" "$msg"
     return 1
 }
 

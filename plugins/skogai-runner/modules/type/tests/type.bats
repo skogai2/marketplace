@@ -34,6 +34,37 @@ item() { printf -- '---\n%s\n---\nbody\n' "$2" >"$THINGS/$1.md"; }
     refute_output_has good.md
 }
 
+@test "type check: one line per file, its problems joined" {
+    printf '{"type": "object", "required": ["name", "kind"], "properties": {"name": {"type": "string"}, "kind": {"type": "string"}}}\n' >"$(module_dir thing)/schema/item.json"
+    item bad 'other: x'
+    run skogai type check thing
+    assert_status 1
+    [[ ${#lines[@]} -eq 2 ]]
+    assert_output_has "thing	$THINGS/bad.md	must have required property 'name'; must have required property 'kind'"
+}
+
+@test "type check: a glob is bash extglob, <key> filled inside it" {
+    skogai config set thing.schema.item '<dir>/!(skip).md'
+    item skip 'name: 1'
+    run skogai type check thing
+    assert_status 0
+    run skogai type ls thing
+    assert_output_has "thing	item	things/!(skip).md	1"
+}
+
+@test "type check --schema: files against <module>.<x>, the same lines" {
+    printf -- '---\nname: x\n---\n' >ok.md
+    printf -- '---\nname: 1\n---\n' >bad.md
+    run skogai type check --schema thing.item ok.md
+    assert_status 0
+    run skogai type check --schema thing.item ok.md bad.md
+    assert_status 1
+    assert_output_has "thing	bad.md	/name must be string"
+    refute_output_has ok.md
+    run skogai type check --schema thing.nope ok.md
+    assert_status 2
+}
+
 @test "type check: frontmatter that does not parse is a problem" {
     printf -- '---\nname: [\n---\n' >"$THINGS/broken.md"
     run skogai type check thing
