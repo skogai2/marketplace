@@ -20,6 +20,7 @@ send :: (prompt, [file], schema) -> json
 - findings over files: `-s check`, rows of `{path, line, rule, severity, message}`.
 - an edit you want a worker to draft: `skogai runner improve -f <file>... "<request>"`. it prints the patch and exits `1`; read it, then rerun with `--apply` before the request. **review patches, don't blind `--apply`.**
 - work worth keeping as a record: `skogai runner wo new <name> -s <schema> -f <file>...`, write the question into `.skogai/workorders/<name>.md`, then `skogai runner wo run <name>`.
+- a worker that needs tools to try skogai things (run modules, change config): `wo new <name> -t Bash -a 'Bash(skogai *)' --sandbox`. it runs in a fresh sandbox at `.skogai/tmp/sandbox/<name>` with every module installed and its own config, kept afterwards to look at. a tool in `-t` that no `-a` pattern allows is denied.
 - what the user actually asked in a session: `skogai runner journal prompts --last N`.
 
 ## rules

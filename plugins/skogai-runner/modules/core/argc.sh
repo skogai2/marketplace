@@ -176,14 +176,14 @@ module::command_of() {
 #
 # the contract (core's tests/contract.bats) runs for every module; its own
 # tests/*.bats load core's tests/helper.bash for an isolated repo and layers.
-# tests come from the module's source when there is one, else where it is found.
+# tests, and core's contract and helper, come from the source when there is one, else where it is found.
 # @arg module*[`_choice_module`]  default every module found
 # @option --filter  only tests whose name matches this regex
 module::test() {
     : "${SKOGAI_BIN:?run me as skogai module test}"
     command -v bats >/dev/null || { echo "bats is not on PATH" >&2; exit 2; }
     local core name dir rc=0 files names=("${argc_module[@]}")
-    IFS=$'\t' read -r _ _ core < <(_module core)
+    core="$(_source core)" || IFS=$'\t' read -r _ _ core < <(_module core)
     [[ ${#names[@]} -gt 0 ]] || mapfile -t names < <(_modules | cut -f1)
     for name in "${names[@]}"; do
         dir="$(_source "$name")" || IFS=$'\t' read -r _ _ dir < <(_module "$name") ||

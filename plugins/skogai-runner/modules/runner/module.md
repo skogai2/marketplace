@@ -30,7 +30,7 @@ files are inlined as `<file path>` blocks, the worker gets no tools unless
 | `send -s check -f <file>...` | findings as `{path, line, rule, severity, message}` |
 | `improve [-f file]... [--apply] <request>` | whole-file edits from a worker, patch derived with `diff -u`; prints it unless `--apply` |
 | `wo new <name> -s <schema> -f <file>...` | write `.skogai/workorders/<name>.md` |
-| `wo run <name>` | run it, result in `<name>.result.json` |
+| `wo run <name> [--sandbox]` | run it, result in `<name>.result.json`; `--sandbox` runs the worker in a fresh sandbox |
 | `wo ls` | workorders and whether they have a result |
 | `journal prompts [file] [--last N] [--md]` | only the user's input from a journal, one json row per turn |
 | `journal harvest [file] [--last N] [--turns N]` | workers pick decisions, docs, todos, learnings out of a journal |
@@ -50,12 +50,25 @@ type: workorder
 title: <name>
 schema: answer
 tools: ""
+allow: []
+sandbox: true
 files:
   - path/to/input.md
 ---
 
 <one bounded question>
 ```
+
+`allow:` are tool patterns the worker may use without asking (`send --allow`);
+the worker runs with `--permission-mode dontAsk`, so a tool in `tools` that no
+pattern allows is denied.
+
+`sandbox: true` (or `wo run --sandbox`) runs the worker inside a fresh
+`skogai module sandbox` at `.skogai/tmp/sandbox/<name>`: cwd the sandbox repo,
+skogai config the sandbox's layers, every module found from here installed.
+a worker with `tools` then tries skogai things there, not in this tree or with
+this config. inputs are still inlined from here. the sandbox is kept after the
+run for a look, and replaced by the next one.
 
 ## config
 

@@ -8,6 +8,8 @@
 
 skogai_setup() {
     local v
+    # run --separate-stderr
+    bats_require_minimum_version 1.5.0
     # config from the caller's env would shadow every layer
     for v in $(compgen -e SKOGAI_); do
         case "$v" in SKOGAI_BIN | SKOGAI_MODULE_PATH | SKOGAI_TEST_*) ;; *) unset "$v" ;; esac

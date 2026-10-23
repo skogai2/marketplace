@@ -10,6 +10,7 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$@" >"$BATS_TEST_TMPDIR/claude.args"
 cat >"$BATS_TEST_TMPDIR/claude.stdin"
+{ pwd; echo "config=${SKOGAI_CONFIG_DIR:-}"; } >"$BATS_TEST_TMPDIR/claude.where"
 printf '%s' "$STUB_ENVELOPE"
 SH
     chmod +x "$BATS_TEST_TMPDIR/stub/claude"
@@ -112,4 +113,38 @@ MD
     refute_output_has "an answer"
     run skogai runner journal prompts --last 1
     [[ $(jq -s length <<<"$output") == 1 ]]
+}
+
+@test "wo run: the worker runs where it is called, with the caller's config" {
+    skogai runner wo new ask -s answer >/dev/null
+    skogai runner wo run ask >/dev/null
+    grep -qx "$REPO" "$BATS_TEST_TMPDIR/claude.where"
+}
+
+@test "wo run: --sandbox runs the worker in a sandbox with every module installed" {
+    echo input >in.md
+    skogai runner wo new ask -s answer -f in.md >/dev/null
+    run --separate-stderr skogai runner wo run ask --sandbox
+    assert_status 0
+    S="$LOCAL/tmp/sandbox/ask"
+    [[ $stderr == *"sandbox: $S"* ]]
+    grep -qx "$S/repo" "$BATS_TEST_TMPDIR/claude.where"
+    grep -qx "config=$S/global" "$BATS_TEST_TMPDIR/claude.where"
+    grep -q '<file path="in.md">' "$BATS_TEST_TMPDIR/claude.stdin"
+    assert_file "$S/repo/.skogai/modules/runner/module.md"
+    [[ $(jq -r .answer "$LOCAL/workorders/ask.result.json") == 42 ]]
+}
+
+@test "wo new --sandbox: the workorder runs sandboxed without the flag" {
+    skogai runner wo new ask -s answer --sandbox >/dev/null
+    grep -qx "sandbox: true" "$LOCAL/workorders/ask.md"
+    skogai runner wo run ask 2>/dev/null
+    grep -qx "$LOCAL/tmp/sandbox/ask/repo" "$BATS_TEST_TMPDIR/claude.where"
+}
+
+@test "wo: allow patterns reach the worker" {
+    skogai runner wo new ask -s answer -t Bash -a 'Bash(pwd)' -a 'Bash(git log *)' >/dev/null
+    skogai runner wo run ask >/dev/null
+    grep -qx 'Bash(pwd)' "$BATS_TEST_TMPDIR/claude.args"
+    grep -qx 'Bash(git log \*)' "$BATS_TEST_TMPDIR/claude.args"
 }

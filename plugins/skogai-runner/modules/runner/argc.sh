@@ -16,6 +16,8 @@ ROOT="$(dirname "$SKOGAI_LOCAL_DIR")"
 WORKORDERS="$SKOGAI_LOCAL_DIR/workorders"
 LOGS="$SKOGAI_LOCAL_DIR/logs/runner"
 JOURNAL="$SKOGAI_LOCAL_DIR/$SKOGAI_RUNNER_JOURNAL"
+# what the agent runs under: empty, or a sandbox's run
+RUN_IN=()
 
 # @cmd send a prompt and files to an agent, print its typed output
 #
@@ -90,18 +92,23 @@ wo() { :; }
 # @option -s --schema[?`_choice_schema`] output schema, default answer
 # @option -f --file* <FILE>            input files
 # @option -t --tools                   tools the worker may use
+# @option -a --allow*                  allowed tool patterns, e.g. "Bash(git log *)"
+# @flag      --sandbox                 the worker runs in a sandbox, see wo run
 wo::new() {
     local path="$WORKORDERS/$argc_name.md"
     [[ ! -e "$path" ]] || { echo "exists: $path" >&2; return 2; }
     mkdir -p "$WORKORDERS"
+    local f
     {
         echo "---"
         echo "type: workorder"
         echo "title: $argc_name"
         echo "schema: ${argc_schema:-answer}"
         echo "tools: \"${argc_tools:-}\""
+        [[ -z ${argc_sandbox:-} ]] || echo "sandbox: true"
+        echo "allow:"
+        for f in "${argc_allow[@]}"; do printf '  - %s\n' "$(jq -n --arg a "$f" '$a')"; done
         echo "files:"
-        local f
         for f in "${argc_file[@]}"; do echo "  - $(realpath -m --relative-to="$ROOT" "$f")"; done
         echo "---"
         echo
@@ -111,8 +118,14 @@ wo::new() {
 }
 
 # @cmd run a workorder, write <name>.result.json beside it
+#
+# with --sandbox (or `sandbox: true` in the workorder) the worker runs in a
+# fresh `skogai module sandbox` at .skogai/tmp/sandbox/<name>: its cwd is the
+# sandbox repo, its skogai config is the sandbox's, every module found from
+# here is installed there. the sandbox is kept for a look afterwards.
 # @arg workorder![`_choice_workorder`] name or path
 # @option -m --model                   model, default the workorder's or runner.model
+# @flag      --sandbox                 run the worker in a sandbox
 wo::run() {
     local path
     path="$(_workorder_path "$argc_workorder")"
@@ -126,6 +139,14 @@ wo::run() {
     schema="$(jq -r '.schema // "answer"' <<<"$fm")"
     model="${argc_model:-$(jq -r --arg d "$SKOGAI_RUNNER_MODEL" '.model // $d' <<<"$fm")}"
     tools="$(jq -r '.tools // ""' <<<"$fm")"
+    mapfile -t argc_allow < <(jq -r '.allow // [] | .[]' <<<"$fm")
+    if [[ -n ${argc_sandbox:-} || $(jq -r '.sandbox // false' <<<"$fm") == true ]]; then
+        local sandbox
+        sandbox="$SKOGAI_LOCAL_DIR/tmp/sandbox/$(basename "$path" .md)"
+        (cd "$ROOT" && skogai module sandbox "$sandbox" >/dev/null 2>&1) || { echo "no sandbox: $sandbox" >&2; return 1; }
+        echo "sandbox: $sandbox" >&2
+        RUN_IN=("$sandbox/run")
+    fi
 
     local result="${path%.md}.result.json" body
     body="$(_body "$path")"
@@ -232,7 +253,7 @@ _agent() {
     local log
     log="$LOGS/$(date +%Y%m%dT%H%M%S)-$$.json"
     # claude exits 1 on agent errors; the envelope says why, so read it below
-    claude "${args[@]}" >"$log" || true
+    "${RUN_IN[@]}" claude "${args[@]}" >"$log" || true
 
     if [[ -n "$raw" ]]; then cat "$log"; fi
     if [[ "$(jq -r '.is_error' "$log")" == true ]]; then
