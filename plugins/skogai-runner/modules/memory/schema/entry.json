@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "memory entry",
+  "description": "frontmatter of .skogai/<memory.dir>/<name>.md; created and stale_after at the top, or under metadata as Claude Code writes them",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "created": { "$ref": "#/$defs/date" },
+    "stale_after": { "$ref": "#/$defs/date" },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created": { "$ref": "#/$defs/date" },
+        "stale_after": { "$ref": "#/$defs/date" }
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["stale_after"], "properties": { "stale_after": true } },
+    {
+      "required": ["metadata"],
+      "properties": {
+        "metadata": { "type": "object", "required": ["stale_after"], "properties": { "stale_after": true } }
+      }
+    }
+  ],
+  "$defs": {
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+  }
+}

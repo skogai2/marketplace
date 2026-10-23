@@ -30,7 +30,7 @@ skogai-runner plugin.
 | `module add <name\|path> [--to] [--apply]` | copy a module into `.skogai/modules` or the global dir |
 | `module diff <name>` | an installed copy against its source |
 | `module new <name> <description> [--to]` | scaffold from `templates/module/` |
-| `module test [name]... [--filter]` | contract tests for each module, then its own `tests/` (bats) |
+| `module test [name]... [--filter]` | for each module the contracts of core and what it requires, then its own `tests/` (bats) |
 | `module build [--to] [--shell]` | generate `skogai` for a shell: one argc file over every module, man pages, completions |
 | `module env <name>` | the env a module's command runs with |
 | `module command <name>` | the path of a module's argc script |

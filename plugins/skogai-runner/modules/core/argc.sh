@@ -172,24 +172,31 @@ module::command_of() {
     echo "$1/$cmd"
 }
 
-# @cmd run modules' tests with bats: core's contract, then the module's own tests/
+# @cmd run modules' tests with bats: the contracts of what it requires, then the module's own tests/
 #
-# the contract (core's tests/contract.bats) runs for every module; its own
-# tests/*.bats load core's tests/helper.bash for an isolated repo and layers.
-# tests, and core's contract and helper, come from the source when there is one, else where it is found.
+# every module you require runs its contract against you: core's
+# tests/contract.bats, and tests/contract.bats of each module in `requires`
+# that has one. its own tests/*.bats, but its contract.bats, run after; they
+# load core's tests/helper.bash for an isolated repo and layers.
+# tests, contracts and the helper come from the source when there is one, else where it is found.
 # @arg module*[`_choice_module`]  default every module found
 # @option --filter  only tests whose name matches this regex
 module::test() {
     : "${SKOGAI_BIN:?run me as skogai module test}"
     command -v bats >/dev/null || { echo "bats is not on PATH" >&2; exit 2; }
-    local core name dir rc=0 files names=("${argc_module[@]}")
+    local core name dir r rdir rc=0 files names=("${argc_module[@]}")
     core="$(_source core)" || IFS=$'\t' read -r _ _ core < <(_module core)
     [[ ${#names[@]} -gt 0 ]] || mapfile -t names < <(_modules | cut -f1)
     for name in "${names[@]}"; do
         dir="$(_source "$name")" || IFS=$'\t' read -r _ _ dir < <(_module "$name") ||
             { echo "no module: $name" >&2; rc=1; continue; }
         files=("$core/tests/contract.bats")
-        [[ ! -d $dir/tests ]] || mapfile -t -O 1 files < <(find "$dir/tests" -name '*.bats' ! -path "$core/tests/contract.bats" | sort)
+        while IFS= read -r r; do
+            [[ -n $r && $r != core ]] || continue
+            rdir="$(_source "$r")" || IFS=$'\t' read -r _ _ rdir < <(_module "$r") || continue
+            [[ ! -f $rdir/tests/contract.bats ]] || files+=("$rdir/tests/contract.bats")
+        done < <(_field "$dir/module.md" '.requires[]')
+        [[ ! -d $dir/tests ]] || mapfile -t -O "${#files[@]}" files < <(find "$dir/tests" -name '*.bats' ! -path "$dir/tests/contract.bats" | sort)
         echo "# $name" >&2
         # the module under test is a source in its isolated repo, wherever it was found
         SKOGAI_MODULE_PATH="$(dirname "$dir"):$MODULE_PATH" \

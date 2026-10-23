@@ -174,11 +174,15 @@ rules:
 
 bats. `skogai module test [name]...` runs, for each module:
 
-1. the contract, core's `tests/contract.bats`: `module check` has no errors,
+1. the contracts: every module you require runs its contract against you.
+   core's `tests/contract.bats` always: `module check` has no errors,
    `--help` exits 0, the command refuses to run outside `skogai`, every
    `config:` default resolves under its name, `module env` is right, `add` is
    a plan and `--apply` installs, and the installed copy passes check and runs.
-2. its own `tests/*.bats`, from its source when it has one.
+   then `tests/contract.bats` of each module in `requires` (not transitive)
+   that has one, with `SKOGAI_TEST_MODULE` still the module under test.
+2. its own `tests/*.bats`, from its source when it has one; its own
+   `tests/contract.bats` is what it holds others to, not run against itself.
 
 a test file starts with `load "$SKOGAI_TEST_HELPER"` (core's
 `tests/helper.bash`). every test then runs in an empty git repo
@@ -200,7 +204,7 @@ not by writing layer files.
 2. fill in `module.md`: `tools`, `files`, `config` defaults, and a body that
    explains every key.
 3. write the recipes in `argc.sh` (argc spec: core's `docs/argc/specification.md`).
-4. write its tests, then `skogai module test <name>`: the contract and its
+4. write its tests, then `skogai module test <name>`: the contracts and its
    own tests pass.
 5. to ship it with a plugin, move the directory to the plugin's `modules/`.
    it is then a `source` everywhere the plugin is enabled.

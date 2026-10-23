@@ -4,13 +4,16 @@ name: memory
 description: one fact per file, each with a stale_after; expired ones get decided on
 command: argc.sh
 tools: [yq]
-requires: [core]
+requires: [core, type]
 files:
   - templates/
+  - schema/
 config:
   dir: memory
   index: MEMORY.md
   stale-days: 30
+  schema:
+    entry: <dir>/*.md
 ---
 
 # memory
@@ -26,5 +29,9 @@ lists what is due.
 | `memory.dir` | `memory` | the entries, relative to `.skogai/` |
 | `memory.index` | `MEMORY.md` | the index, inside `memory.dir` |
 | `memory.stale-days` | `30` | days from `created` to `stale_after` for `new` |
+| `memory.schema.entry` | `<dir>/*.md` | the entries `schema/entry.json` is checked against (`skogai type check memory`), relative to `.skogai/`; `<dir>` is `memory.dir` |
 
 `templates/entry.md` is what `new` writes; an installed copy can be edited.
+`schema/entry.json` is what an entry's frontmatter must be: `name` and
+`description`, and `stale_after` (with an optional `created`) at the top or
+under `metadata:`.
