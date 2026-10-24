@@ -6,7 +6,6 @@
 - [ ] marketplace;fold `scripts/` and the pre-commit checks into the marketplace module
 - [ ] module;plugins other than skogai-runner shipping `modules/`: how they get onto `SKOGAI_MODULE_PATH`
 - [ ] module;`module update`: pull source changes into an installed copy, `keep` respected
-- [ ] module;run `skogai module test` in the `marketplace` workflow and pre-commit (CI needs bats, argc, yq)
 - [ ] module;top-level `bin/` blocks claude.ai organization sync of this plugin (docs/plugins/components.md)
 - [ ] module;`~/.local/src/argc-completions/completions/skogai.sh` is generated from the gone dash-skogai CLI and shadows `skogai` completion
 - [ ] module;`~/skogai/.skogai/config` is a directory, the local config layer is a file at that path

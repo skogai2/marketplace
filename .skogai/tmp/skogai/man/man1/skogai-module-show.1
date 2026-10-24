@@ -1,0 +1,29 @@
+.TH SKOGAI-MODULE-SHOW 1  "skogai-module-show 0.0.0" 
+.SH NAME
+skogai\-module\-show \- a module's manifest, where it lives, and what it is missing
+.SH SYNOPSIS
+\fBskogai module show\fR <NAME>
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+
+.TP
+<\fINAME\fR>
+
+.SH "ENVIRONMENT VARIABLES:"
+.TP
+\fISKOGAI_SYSTEM_DIR\fR [default: /etc/skogai]
+.br
+dir of the system layer config
+.TP
+\fISKOGAI_CONFIG_DIR\fR
+.br
+dir of the global layer, default ~/.config/skogai
+.TP
+\fISKOGAI_LOCAL_DIR\fR [default: .skogai]
+.br
+dir of the local layer; relative is from the git root, or pwd
+.TP
+\fISKOGAI_MODULE_PATH\fR
+.br
+colon\-separated dirs of module sources, default the one this module sits in

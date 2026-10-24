@@ -1,0 +1,15 @@
+.TH "SKOGAI RUNNER-JOURNAL" 1  "skogai runner-journal 0.0.0" 
+.SH NAME
+skogai runner\-journal \- session journals (runner.journal in .skogai): read them back, harvest them
+.SH SYNOPSIS
+\fBskogai runner journal\fR <COMMAND>
+.SH SUBCOMMANDS
+.TP
+skogai runner\-journal\-prompts(1)
+only the user's input, one json row per turn
+.TP
+skogai runner\-journal\-harvest(1)
+agents pick decisions, docs, todos and learnings out of a journal
+
+the journal is cut into chunks of \-\-turns turns, each chunk goes to one
+worker with schema `harvest`. stdout is one json array of every item.

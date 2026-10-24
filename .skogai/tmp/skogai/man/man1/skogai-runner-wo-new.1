@@ -1,0 +1,34 @@
+.TH "SKOGAI RUNNER-WO-NEW" 1  "skogai runner-wo-new 0.0.0" 
+.SH NAME
+skogai runner\-wo\-new \- scaffold a workorder
+.SH SYNOPSIS
+\fBskogai runner wo new\fR [OPTIONS] <NAME>
+.SH OPTIONS
+.TP
+\fB\-s\fR, \fB\-\-schema\fR=\fISCHEMA\fR
+.br
+output schema, default answer
+.TP
+\fB\-f\fR, \fB\-\-file\fR=[\fIFILE\fR]...
+.br
+input files
+.TP
+\fB\-t\fR, \fB\-\-tools\fR=\fITOOLS\fR
+.br
+tools the worker may use
+.TP
+\fB\-a\fR, \fB\-\-allow\fR=[\fIALLOW\fR]...
+.br
+allowed tool patterns, e.g. "Bash(git log *)"
+.TP
+\fB\-\-sandbox\fR
+.br
+the worker runs in a sandbox, see wo run
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help
+.TP
+<\fINAME\fR>
+.br
+kebab\-case name

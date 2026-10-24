@@ -175,9 +175,8 @@ rules:
 
 bats. `skogai module test [name]...` runs, for each module:
 
-1. the contracts: every module you require runs its contract against you.
-   core's `tests/contract.bats` always: `module check` has no errors,
-   `--help` exits 0, the command refuses to run outside `skogai`, every
+1. the contract, core's `tests/contract.bats`: `module check` has no errors,
+   `--help` exits 0, the command refuses to run outside `skogai` and says so, every
    `config:` default resolves under its name, `module env` is right, `add` is
    a plan and `--apply` installs, and the installed copy passes check and runs.
    then `tests/contract.bats` of each module in `requires` (not transitive)
@@ -202,6 +201,10 @@ helpers: `skogai`, `module_dir`, `module_field`, `assert_status`,
 
 set state the way a user would (`skogai config set`, `skogai module add`),
 not by writing layer files.
+
+a bare `! cmd` never fails a bats test: end a helper function with it, or
+use `[[ ... ]]`. test the failure paths too: what a command refuses, and
+that a failure leaves nothing behind.
 
 ## creating one
 

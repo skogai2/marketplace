@@ -1,0 +1,52 @@
+.TH SKOGAI-CONFIG 1  "skogai-config 0.0.0" 
+.SH NAME
+skogai\-config \- read and write key/value config across system, global, local and module layers
+.SH SYNOPSIS
+\fBskogai config\fR <COMMAND>
+.SH DESCRIPTION
+.br
+read and write key/value config across system, global, local and module layers
+.br
+
+.br
+fold order, later wins: module.md `config:` defaults, system, global, local,
+.br
+module.local.md overrides, \-\-file layers, then SKOGAI_* env.
+.br
+a module's keys are mounted under its name: runner's `model` is `runner.model`.
+.SH SUBCOMMANDS
+.TP
+skogai\-config\-get(1)
+print the resolved value of a key; a list prints one item per line
+.TP
+skogai\-config\-set(1)
+set a key in the local layer, the global one, a module's module.local.md or a \-\-file's .local.md
+.TP
+skogai\-config\-unset(1)
+remove a key from the local layer, the global one, a module's module.local.md or a \-\-file's .local.md
+.TP
+skogai\-config\-list(1)
+print every resolved key as key=value; a list prints one line per item
+.TP
+skogai\-config\-env(1)
+print the resolved config as export lines; a list's items are newline\-separated
+.TP
+skogai\-config\-files(1)
+print the path of each layer file, and whether it exists
+.SH "ENVIRONMENT VARIABLES:"
+.TP
+\fISKOGAI_SYSTEM_DIR\fR [default: /etc/skogai]
+.br
+dir of the system layer config
+.TP
+\fISKOGAI_CONFIG_DIR\fR
+.br
+dir of the global layer, default ~/.config/skogai
+.TP
+\fISKOGAI_LOCAL_DIR\fR [default: .skogai]
+.br
+dir of the local layer; relative is from the git root, or pwd
+.TP
+\fISKOGAI_MODULE_PATH\fR
+.br
+colon\-separated dirs of module sources, default the one this module sits in

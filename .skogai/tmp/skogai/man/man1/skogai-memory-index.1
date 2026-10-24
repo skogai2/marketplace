@@ -1,0 +1,23 @@
+.TH "SKOGAI MEMORY-INDEX" 1  "skogai memory-index 0.0.0" 
+.SH NAME
+skogai memory\-index \- index lines for entries missing from the index, and index links to missing files. pure unless \-\-apply
+.SH SYNOPSIS
+\fBskogai memory index\fR [OPTIONS]
+.SH DESCRIPTION
+.br
+index lines for entries missing from the index, and index links to missing files. pure unless \-\-apply
+.br
+
+.br
+exit 1 when something is out of sync and \-\-apply was not given.
+.br
+\-\-apply appends the missing lines; dead links are only reported.
+.SH OPTIONS
+.TP
+\fB\-\-apply\fR
+.br
+append the missing lines to the index
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help

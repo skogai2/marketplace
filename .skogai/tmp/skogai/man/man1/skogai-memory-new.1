@@ -1,0 +1,22 @@
+.TH "SKOGAI MEMORY-NEW" 1  "skogai memory-new 0.0.0" 
+.SH NAME
+skogai memory\-new \- write a new entry from templates/entry.md; refuses an existing name
+.SH SYNOPSIS
+\fBskogai memory new\fR [OPTIONS] <NAME> <DESCRIPTION>
+.SH OPTIONS
+.TP
+\fB\-\-days\fR=\fIDAYS\fR
+.br
+days until stale, default memory.stale\-days
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help
+.TP
+<\fINAME\fR>
+.br
+lowercase, `\-` inside a name
+.TP
+<\fIDESCRIPTION\fR>
+.br
+one line, used for recall

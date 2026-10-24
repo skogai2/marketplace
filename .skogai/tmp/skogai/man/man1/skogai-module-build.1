@@ -1,0 +1,58 @@
+.TH SKOGAI-MODULE-BUILD 1  "skogai-module-build 0.0.0" 
+.SH NAME
+skogai\-module\-build \- build `skogai` for a shell: one argc file with every module, man pages, completions
+.SH SYNOPSIS
+\fBskogai module build\fR [OPTIONS]
+.SH DESCRIPTION
+.br
+build `skogai` for a shell: one argc file with every module, man pages, completions
+.br
+
+.br
+writes into <local|global dir>/tmp/skogai/, throwaway and rebuilt at will:
+.br
+bin/skogai (help and completion for core and every module found from here;
+.br
+everything runs through the bin/skogai that built it), completions/skogai.sh
+.br
+for ARGC_COMPLETIONS_PATH, completions/skogai.{bash,zsh,fish}, man/man1.
+.br
+prints the env lines that put it on PATH, MANPATH and ARGC_COMPLETIONS_PATH.
+.SH OPTIONS
+.TP
+\fB\-\-to\fR=\fITO\fR
+.br
+where to build, default core.module.install
+.br
+
+.br
+[\fIpossible values: \fRlocal, global]
+.TP
+\fB\-\-shell\fR=\fISHELL\fR
+.br
+env lines for this shell, default from $SHELL
+.br
+
+.br
+[\fIpossible values: \fRbash, zsh, fish]
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help
+.SH "ENVIRONMENT VARIABLES:"
+.TP
+\fISKOGAI_SYSTEM_DIR\fR [default: /etc/skogai]
+.br
+dir of the system layer config
+.TP
+\fISKOGAI_CONFIG_DIR\fR
+.br
+dir of the global layer, default ~/.config/skogai
+.TP
+\fISKOGAI_LOCAL_DIR\fR [default: .skogai]
+.br
+dir of the local layer; relative is from the git root, or pwd
+.TP
+\fISKOGAI_MODULE_PATH\fR
+.br
+colon\-separated dirs of module sources, default the one this module sits in

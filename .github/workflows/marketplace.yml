@@ -2,9 +2,9 @@ name: marketplace
 
 on:
   push:
-    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh"]
+    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh", "plugins/skogai-runner/**", "mise.toml", ".github/workflows/marketplace.yml"]
   pull_request:
-    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh"]
+    paths: [".claude-plugin/**", "plugins/*/.claude-plugin/**", "scripts/generate-marketplace-json.sh", "plugins/skogai-runner/**", "mise.toml", ".github/workflows/marketplace.yml"]
 
 jobs:
   check:
@@ -15,3 +15,13 @@ jobs:
         run: scripts/generate-marketplace-json.sh --check
         env:
           GH_TOKEN: ${{ github.token }}
+
+  modules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: argc bats jq yq
+      - name: skogai module test, every module skogai-runner ships
+        run: plugins/skogai-runner/bin/skogai module test

@@ -1,0 +1,49 @@
+.TH SKOGAI-CONFIG-SET 1  "skogai-config-set 0.0.0" 
+.SH NAME
+skogai\-config\-set \- set a key in the local layer, the global one, a module's module.local.md or a \-\-file's .local.md
+.SH SYNOPSIS
+\fBskogai config set\fR [OPTIONS] <KEY> <VALUE>
+.SH OPTIONS
+.TP
+\fB\-\-global\fR
+.br
+write to the global layer instead of local
+.TP
+\fB\-\-module\fR=\fIMODULE\fR
+.br
+write this module's module.local.md
+.TP
+\fB\-\-file\fR=\fIFILE\fR
+.br
+write this file's .local.md frontmatter instead
+.TP
+\fB\-\-scope\fR=\fISCOPE\fR
+.br
+the section \-\-file keys are mounted under
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help
+.TP
+<\fIKEY\fR>
+
+.TP
+<\fIVALUE\fR>
+
+.SH "ENVIRONMENT VARIABLES:"
+.TP
+\fISKOGAI_SYSTEM_DIR\fR [default: /etc/skogai]
+.br
+dir of the system layer config
+.TP
+\fISKOGAI_CONFIG_DIR\fR
+.br
+dir of the global layer, default ~/.config/skogai
+.TP
+\fISKOGAI_LOCAL_DIR\fR [default: .skogai]
+.br
+dir of the local layer; relative is from the git root, or pwd
+.TP
+\fISKOGAI_MODULE_PATH\fR
+.br
+colon\-separated dirs of module sources, default the one this module sits in

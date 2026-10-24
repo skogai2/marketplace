@@ -1,0 +1,20 @@
+.TH "SKOGAI RUNNER-WO" 1  "skogai runner-wo 0.0.0" 
+.SH NAME
+skogai runner\-wo \- workorders: one bounded question, gathered inputs, checkable output
+.SH SYNOPSIS
+\fBskogai runner wo\fR <COMMAND>
+.SH SUBCOMMANDS
+.TP
+skogai runner\-wo\-new(1)
+scaffold a workorder
+.TP
+skogai runner\-wo\-run(1)
+run a workorder, write <name>.result.json beside it
+
+with \-\-sandbox (or `sandbox: true` in the workorder) the worker runs in a
+fresh `skogai module sandbox` at .skogai/tmp/sandbox/<name>: its cwd is the
+sandbox repo, its skogai config is the sandbox's, every module found from
+here is installed there. the sandbox is kept for a look afterwards.
+.TP
+skogai runner\-wo\-ls(1)
+list workorders and whether they have a result

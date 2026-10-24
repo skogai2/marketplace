@@ -1,0 +1,85 @@
+.TH SKOGAI-MODULE 1  "skogai-module 0.0.0" 
+.SH NAME
+skogai\-module \- find, show, install and scaffold modules
+.SH SYNOPSIS
+\fBskogai module\fR <COMMAND>
+.SH SUBCOMMANDS
+.TP
+skogai\-module\-ls(1)
+every module by name: where it was found and what it is
+.TP
+skogai\-module\-show(1)
+a module's manifest, where it lives, and what it is missing
+.TP
+skogai\-module\-command(1)
+path of a module's argc script; exits 1 if it has none
+.TP
+skogai\-module\-test(1)
+run modules' tests with bats: core's contract, then the module's own tests/
+
+the contract (core's tests/contract.bats) runs for every module; its own
+tests/*.bats load core's tests/helper.bash for an isolated repo and layers.
+tests, and core's contract and helper, come from the source when there is one, else where it is found.
+.TP
+skogai\-module\-build(1)
+build `skogai` for a shell: one argc file with every module, man pages, completions
+
+writes into <local|global dir>/tmp/skogai/, throwaway and rebuilt at will:
+bin/skogai (help and completion for core and every module found from here;
+everything runs through the bin/skogai that built it), completions/skogai.sh
+for ARGC_COMPLETIONS_PATH, completions/skogai.{bash,zsh,fish}, man/man1.
+prints the env lines that put it on PATH, MANPATH and ARGC_COMPLETIONS_PATH.
+.TP
+skogai\-module\-sandbox(1)
+an empty skogai to try things in: own layers, every module installed, skogai built
+
+makes <dir>/system and <dir>/global (the system and global layers) and a
+git repo <dir>/repo, installs every module found from here into its
+\&.skogai/modules (as `module add \-\-apply` would, from its source when it has
+one, else from where it was found) and builds skogai there.
+prints the env lines that switch a shell into it: no SKOGAI_* config from
+outside, the three layer dirs, the built skogai first on PATH, cd to repo.
+a dir made by an earlier sandbox is replaced; any other existing one is refused.
+.TP
+skogai\-module\-check(1)
+check modules against the spec (docs/module.md), all found ones if none given
+
+one line per problem: name, error or warn, message. exit 1 on any error;
+a missing tool is a warn, it is about this machine, not the module.
+.TP
+skogai\-module\-env(1)
+the env a module's command runs with, as export lines
+
+SKOGAI_MODULE, SKOGAI_MODULE_DIR, SKOGAI_LOCAL_DIR and SKOGAI_CONFIG_DIR
+(both absolute), and the module's own resolved keys: runner.model is
+SKOGAI_RUNNER_MODEL.
+.TP
+skogai\-module\-add(1)
+copy a module into .skogai/modules, or the global dir. prints the plan unless \-\-apply
+
+copies module.md, its command and its `files:`. a file already there and
+different is kept and reported; `skogai module diff` shows how.
+exit 1 when there is something to copy and \-\-apply was not given.
+.TP
+skogai\-module\-diff(1)
+diff an installed module against its source
+.TP
+skogai\-module\-new(1)
+scaffold a new module from core's templates/module
+.SH "ENVIRONMENT VARIABLES:"
+.TP
+\fISKOGAI_SYSTEM_DIR\fR [default: /etc/skogai]
+.br
+dir of the system layer config
+.TP
+\fISKOGAI_CONFIG_DIR\fR
+.br
+dir of the global layer, default ~/.config/skogai
+.TP
+\fISKOGAI_LOCAL_DIR\fR [default: .skogai]
+.br
+dir of the local layer; relative is from the git root, or pwd
+.TP
+\fISKOGAI_MODULE_PATH\fR
+.br
+colon\-separated dirs of module sources, default the one this module sits in

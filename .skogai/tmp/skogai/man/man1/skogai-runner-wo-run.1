@@ -1,0 +1,35 @@
+.TH "SKOGAI RUNNER-WO-RUN" 1  "skogai runner-wo-run 0.0.0" 
+.SH NAME
+skogai runner\-wo\-run \- run a workorder, write <name>.result.json beside it
+.SH SYNOPSIS
+\fBskogai runner wo run\fR [OPTIONS] <WORKORDER>
+.SH DESCRIPTION
+.br
+run a workorder, write <name>.result.json beside it
+.br
+
+.br
+with \-\-sandbox (or `sandbox: true` in the workorder) the worker runs in a
+.br
+fresh `skogai module sandbox` at .skogai/tmp/sandbox/<name>: its cwd is the
+.br
+sandbox repo, its skogai config is the sandbox's, every module found from
+.br
+here is installed there. the sandbox is kept for a look afterwards.
+.SH OPTIONS
+.TP
+\fB\-m\fR, \fB\-\-model\fR=\fIMODEL\fR
+.br
+model, default the workorder's or runner.model
+.TP
+\fB\-\-sandbox\fR
+.br
+run the worker in a sandbox
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.br
+Print help
+.TP
+<\fIWORKORDER\fR>
+.br
+name or path
