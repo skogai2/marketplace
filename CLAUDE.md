@@ -14,7 +14,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build or test suite. `
 
 ## Validating
 
-- `claude plugin validate plugins/<name>` — run after changing a plugin or its marketplace entry. `skogai marketplace check [name]` does that plus the generator `--check` (a local module, `.skogai/modules/marketplace/`; `skogai` is skogai-runner's, see its `module` skill).
+- `claude plugin validate plugins/<name>` — run after changing a plugin or its marketplace entry.
 - `claude -p "reply with just OK" --plugin-dir plugins/<name>` — headless load check.
 - `plugins/skogai-core/LEARNINGS.md` lists function-hook validator rules (string-literal event names, function-literal hooks, `$.noun.method()` only; one throwing hook stops the whole module loading). Read it before writing TypeScript hook modules.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @describe markdown frontmatter as key/value config, extracted from skogai-runner's core module
+# @describe markdown frontmatter as key/value config, extracted from skogai-runner's core module (~/.local/src/skogai-runner)
 #
 # each --file X.md is a layer, with its X.local.md after it; later wins, then
 # <PREFIX>_* env. nested maps flatten to dotted keys, `_` reads as `-`, a list

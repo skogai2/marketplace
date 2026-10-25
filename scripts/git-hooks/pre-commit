@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 # Installed via: git config core.hooksPath scripts/git-hooks
 # When a manifest is staged, marketplace.json must match what
-# scripts/generate-marketplace-json.sh would write. When skogai-runner is
-# staged, the tests of every module it ships pass.
+# scripts/generate-marketplace-json.sh would write.
 set -euo pipefail
 
 if git diff --cached --name-only | grep -qE '^(\.claude-plugin/|plugins/[^/]+/\.claude-plugin/)'; then
   "$(git rev-parse --show-toplevel)/scripts/generate-marketplace-json.sh" --check >/dev/null
-fi
-
-if git diff --cached --name-only | grep -q '^plugins/skogai-runner/'; then
-  root="$(git rev-parse --show-toplevel)/plugins/skogai-runner"
-  # by name, so installed copies elsewhere on this machine are not what runs
-  out="$("$root/bin/skogai" module test $(ls "$root/modules") 2>&1)" || { grep -v '^ok ' <<<"$out" >&2; exit 1; }
 fi

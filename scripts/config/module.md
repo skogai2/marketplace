@@ -9,7 +9,7 @@ requires: []
 
 # config
 
-the config half of skogai-runner's core module, copied out as is.
+the config half of skogai-runner's core module (`~/.local/src/skogai-runner`), copied out as is.
 
 | command | |
 |---|---|
