@@ -1,0 +1,57 @@
+name: skogai-marketplace
+version: 1.0.0
+description: skogai-marketplace
+author: Emil Skogsund
+license: UNLICENSED
+includes: auto
+scripts: {}
+marketplace:
+  owner:
+    name: skogix
+    url: https://github.com/skogai
+
+  # Default tag pattern used to resolve version ranges for each package.
+  build:
+    tagPattern: "v{version}"
+
+  # Output targets (map form). 'claude' is enabled by default;
+  # uncomment 'codex' below to publish the Codex artifact too.
+  # Each output writes to its profile default path; add 'path:'
+  # under a key to override.
+  outputs:
+    claude:
+      path: build/apm-marketplace.json
+    # codex: {}
+    #
+    # Note: enabling codex requires every package below to declare
+    # 'category:' (e.g. category: Productivity).
+
+  # CI tip: build one or all formats with a machine-readable manifest:
+  #   apm pack --marketplace=claude,codex --json | jq -r '.marketplace.outputs[].path'
+
+  packages:
+  - name: skogai-core
+    description: "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
+    source: ./plugins/skogai-core
+    version: 0.8.0
+  - name: skogai-council
+    description: "Consult multiple AI coding agents (Gemini, OpenAI, Grok, Perplexity, Kimi, any model OpenRouter routes to, plus codex, antigravity, grok, kimi and cursor CLIs when installed, and a local ollama model) to get diverse perspectives on coding problems, with a streaming pane in tmux or inside Claude Code, and, once switched on, a heads-up side-check where one council seat, codex by default, rereads a long turn and shows one line above the prompt about something you may have missed."
+    source: ./plugins/skogai-council
+    version: 2026.10.11
+  - name: skogai-runner
+    description: "skogai modules: argc commands packaged with their files and config, run as `skogai <module>`; core, memory and runner (typed agent io)"
+    source: ./plugins/skogai-runner
+    version: 0.9.1
+  - name: loadout
+    description: "Harness manager: switchable profiles, scope provenance and on/off for every harness element"
+    source: https://github.com/skogai2/loadout
+    ref: 6695e2fe3a87ff81eae22c7ab5435f3c6e8ccebd
+  - name: open-knowledge-plugin
+    description: "Author, maintain, backfill, validate, visualize and serve (MCP) Open Knowledge Format (OKF) bundles."
+    source: https://github.com/skogai2/open-knowledge-plugin
+    ref: 5329c530e154b1109a78da040aa084c5479790bc
+  - name: codex
+    description: "Use Codex from Claude Code to review code or delegate tasks."
+    source: openai/codex-plugin-cc
+    ref: db52e28f4d9ded852ab3942cea316258ae4ef346
+    subdir: plugins/codex
