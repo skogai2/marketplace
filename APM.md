@@ -47,3 +47,4 @@ rule behind the hook breaks: apm copies the directory of the file a hook command
 
 - 2026-10-25: first test run; findings above.
 - 2026-10-25: consumer-only chosen; `marketplace:` block and `build/` removed. the producer findings stay as the record of the test.
+- 2026-10-25: codex marketplace: not yet (q4).
