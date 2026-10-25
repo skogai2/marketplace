@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "skogai-marketplace",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "skogai-marketplace",
   "owner": {
     "name": "skogix",
@@ -43,6 +43,11 @@
       "name": "skogai-core",
       "source": "./plugins/skogai-core",
       "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line."
+    },
+    {
+      "name": "skogai-council",
+      "source": "./plugins/skogai-council",
+      "description": "Consult multiple AI coding agents (Gemini, OpenAI, Grok, Perplexity, Kimi, any model OpenRouter routes to, plus codex, antigravity, grok, kimi and cursor CLIs when installed, and a local ollama model) to get diverse perspectives on coding problems, with a streaming pane in tmux or inside Claude Code, and, once switched on, a heads-up side-check where one council seat, codex by default, rereads a long turn and shows one line above the prompt about something you may have missed."
     },
     {
       "name": "skogai-runner",

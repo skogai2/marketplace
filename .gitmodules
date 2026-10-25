@@ -1,3 +1,6 @@
 [submodule "plugins/context7"]
 	path = plugins/context7
 	url = https://github.com/upstash/context7.git
+[submodule "plugins/skogai-council"]
+	path = plugins/skogai-council
+	url = https://github.com/skogai/skogai-council.git

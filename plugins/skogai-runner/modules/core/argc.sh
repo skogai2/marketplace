@@ -241,7 +241,6 @@ module::build() {
     rm -rf "$out"
     mkdir -p "$(dirname "$out")"
     cp -r "$tmp" "$out"
-    echo "built $out" >&2
     shell="${argc_shell:-$(basename "${SHELL:-bash}")}"
     # shellcheck disable=SC2016 # lines for the user's shell, expanded there
     case "$shell" in
