@@ -10,7 +10,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build or test suite. `
 - Marketplace entries carry only `name`, `source`, `description` (and `strict` in that one case); `name` is kebab-case and matches the directory. Versions go in each plugin's `.claude-plugin/plugin.json`, not the marketplace entry.
 - `docs/` is a synced snapshot of the Claude Code docs (date in `docs/synced-at.txt`). Treat it as the read-only reference for plugin/hook/marketplace APIs; never edit it.
 - `CONVENTIONS.md` documents this repo's conventions and how the generator works.
-- `apm.yml` is a learning test of apm; `apm pack` writes claude and codex marketplace json to `build/` (gitignored) for comparison. The generator stays the source of truth. What apm is and what it does with these plugins: `APM.md`.
+- `apm.yml` is consumer-only: it declares this repo's own agent dependencies (none yet) for `apm install`. It has no `marketplace:` block; the generator owns `marketplace.json`. What apm is and how it treats these plugins: `APM.md`.
 
 ## Validating
 

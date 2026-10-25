@@ -1,6 +1,6 @@
 # apm
 
-what apm (`~/.local/src/apm`, 0.35.0) is, and what it does with this marketplace. learning test; the generator (`scripts/generate-marketplace-json.sh`) stays the source of truth for `.claude-plugin/marketplace.json`.
+what apm (`~/.local/src/apm`, 0.35.0) is, and what it does with this marketplace. `apm.yml` here is consumer-only (decided 2026-10-25): it declares this repo's own agent dependencies for `apm install`, and has no `marketplace:` block. the generator (`scripts/generate-marketplace-json.sh`) owns `.claude-plugin/marketplace.json`.
 
 ## what apm is
 
@@ -11,11 +11,11 @@ one `apm.yml` serves two roles:
 - consumer: `dependencies:` + `targets:`, then `apm install`. writes harness files and the lockfile.
 - producer: `marketplace:` block, then `apm pack`. writes marketplace json for claude, codex and/or copilot.
 
-with `targets:` or `dependencies:` present, `apm pack` also writes a root `.claude-plugin/plugin.json` (the repo packed as a plugin). this repo's `apm.yml` has neither, so it is producer-only.
+with `targets:` or `dependencies:` present, `apm pack` also writes a root `.claude-plugin/plugin.json` (the repo packed as a plugin). `apm install` does not; this repo's `apm.yml` is consumer-only, so it is never packed.
 
-## producer: `apm pack` here
+## producer: `apm pack` (tested, then removed)
 
-- `apm.yml` lists the same 6 entries; output goes to `build/` (gitignored), not over the real files.
+- a `marketplace:` block listing the same 6 entries, packed to a scratch `build/`.
 - claude output: same names and descriptions as the generator, passes `claude plugin validate`. adds `version`, `ref`/`sha`, `tag_pattern`. no `strict` and no `renames`, which this marketplace needs.
 - codex output (`outputs.codex`, every package needs `category:`): codex 0.164 reads it, and `codex plugin add` installs the whole plugin tree (bin/, modules/, ...) from `.claude-plugin/plugin.json`. the generator has no codex output, so this is what apm adds.
 - descriptions are not read from local `plugin.json` and the remote lookup 404s, so they are written in `apm.yml` by hand. that duplicates what the generator reads.
@@ -46,3 +46,4 @@ rule behind the hook breaks: apm copies the directory of the file a hook command
 ## append-only
 
 - 2026-10-25: first test run; findings above.
+- 2026-10-25: consumer-only chosen; `marketplace:` block and `build/` removed. the producer findings stay as the record of the test.

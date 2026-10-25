@@ -4,5 +4,3 @@
 .claude/*.local.md
 /.skogai/tmp/git-diff
 
-# apm pack output (apm.yml learning test)
-/build/
