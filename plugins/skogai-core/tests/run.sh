@@ -8,6 +8,8 @@ scripts=$(cd "$(dirname "$0")/../scripts" && pwd)
 repo=$(mktemp -d)
 trap 'rm -rf "$repo"' EXIT
 git -C "$repo" init -q
+git -C "$repo" config user.name test
+git -C "$repo" config user.email test@example.com
 mkdir -p "$repo/src"
 echo hi >"$repo/src/a.txt"
 
@@ -41,7 +43,7 @@ log="$repo/.skogai/logs/skogai-core/log.jsonl"
 check "log is at the git root, one row per event" \
   "UserPromptSubmit UserPromptSubmit PostToolUse PostToolUse PostToolUseFailure PostToolUse Stop" \
   "$(jq -r .event "$log" | paste -sd' ')"
-check "only Stop has an action" "journal entry, git add -A, wrote .skogai/tmp" "$(jq -r '.action // empty' "$log")"
+check "only Stop has an action" "journal entry, committed journal and log, git add -A, wrote .skogai/tmp" "$(jq -r '.action // empty' "$log")"
 
 expected="## <ts> · turn 11111111
 
@@ -61,8 +63,10 @@ done
 - Read \`src/a.txt\` (failed)"
 check "journal entry at the git root" "$expected" \
   "$(sed -E '1s/^## .{16} ·/## <ts> ·/' "$repo/.skogai/journal.md")"
-check "journal and work are staged, log is not" \
-  "$(printf '.skogai/journal.md\nsrc/a.txt')" \
+check "journal and log are committed, nothing else" \
+  "$(printf '.skogai/journal.md\n.skogai/logs/skogai-core/log.jsonl')" \
+  "$(git -C "$repo" show --name-only --format= HEAD)"
+check "work is staged, not committed" "src/a.txt" \
   "$(git -C "$repo" diff --cached --name-only | grep -v '^.skogai/logs/')"
 
 # Settings in .claude/skogai-core.local.md: a filtered list and another log path.

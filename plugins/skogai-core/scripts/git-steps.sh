@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Runs the git steps switched on for one event, from the git root, and prints
 # what ran as a comma-separated list for the log.
-# Usage: git-steps.sh <EVENT> <root>   (EVENT: STOP or USER_PROMPT_SUBMIT)
-# Switches, all off unless true, run in this order (dash's `skogai config`
-# keys, with the env names they map to, <EVENT> without its `_`):
+# Usage: git-steps.sh <EVENT> <root> [path...]   (EVENT: STOP or USER_PROMPT_SUBMIT)
+# Switches run in this order (dash's `skogai config` keys, with the env names
+# they map to, <EVENT> without its `_`). `journal` is on unless false, the
+# others are off unless true:
+#   journal.on-<event> SKOGAI_JOURNAL_ON<EVENT>  commit only the given paths
+#                      (the journal and the log; force-added, since the log
+#                      is gitignored), leaving the rest of the index alone
 #   stage.on-<event>   SKOGAI_STAGE_ON<EVENT>    `git add -A`
 #   commit.on-<event>  SKOGAI_COMMIT_ON<EVENT>   `wt step commit` (skipped when the tree is clean)
 #   merge.on-<event>   SKOGAI_MERGE_ON<EVENT>    `wt merge --no-remove`
@@ -12,6 +16,7 @@
 set -euo pipefail
 
 event=$1 root=$2
+shift 2
 on=on-$(tr '[:upper:]_' '[:lower:]-' <<<"$event")
 config=$(cd "$root" && skogai config list 2>/dev/null) || config=
 
@@ -25,6 +30,22 @@ switch() {
   fi
 }
 ran=()
+
+# Only paths inside this repo that exist; a log_path elsewhere is skipped.
+paths=()
+for path in "$@"; do
+  [[ $path == "$root"/* && -e $path ]] && paths+=("${path#"$root"/}")
+done
+if [[ ${#paths[@]} -gt 0 && $(switch journal) != false ]]; then
+  git -C "$root" add -f -- "${paths[@]}"
+  if git -C "$root" diff --cached --quiet -- "${paths[@]}"; then
+    : # nothing new since the last commit
+  elif git -C "$root" commit -q --only -m "skogai-core: journal and log" -- "${paths[@]}" >&2; then
+    ran+=("committed journal and log")
+  else
+    ran+=("journal commit (failed)")
+  fi
+fi
 
 if [[ $(switch stage) == true ]]; then
   git -C "$root" add -A

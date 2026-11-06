@@ -12,10 +12,11 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 - Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ONSTOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
-- Git steps are switched by dash's `skogai config` keys (`stage.on-stop`, ...), read by `scripts/git-steps.sh` from the git root, so `.skogai/config` and `~/.skogai/config` apply. Each key's env var overrides it, and without a working `skogai` on PATH the env vars are all there is. All are off unless `true`, and run in table order:
+- Git steps are switched by dash's `skogai config` keys (`stage.on-stop`, ...), read by `scripts/git-steps.sh` from the git root, so `.skogai/config` and `~/.skogai/config` apply. Each key's env var overrides it, and without a working `skogai` on PATH the env vars are all there is. `journal` is on unless `false`, the rest are off unless `true`, and they run in table order:
 
   | Env (`<EVENT>` is `STOP` or `USERPROMPTSUBMIT`) | Runs |
   |---|---|
+  | `SKOGAI_JOURNAL_ON<EVENT>` | `git add -f` and `git commit --only` of `.skogai/journal.md` and the log (only on `Stop`, which passes those paths), skipped when they're unchanged |
   | `SKOGAI_STAGE_ON<EVENT>` | `git add -A` |
   | `SKOGAI_COMMIT_ON<EVENT>` | `wt step commit`, skipped when the tree is clean |
   | `SKOGAI_MERGE_ON<EVENT>` | `wt merge --no-remove` |
@@ -25,5 +26,5 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 ## Left out on purpose
 
-- No automatic commits unless switched on.
+- No automatic commits of anything but the journal and the log unless switched on. The Stop row itself lands in the log after the commit, so it goes in with the next one.
 - No mid-session diff injection.
