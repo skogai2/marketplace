@@ -11,5 +11,15 @@
   {
     "source": "url",
     "url": "https://github.com/skogai2/open-knowledge-plugin.git"
+  },
+  {
+    "source": "git-subdir",
+    "url": "https://github.com/upstash/context7.git",
+    "path": "plugins/claude/context7"
+  },
+  {
+    "source": "url",
+    "url": "https://github.com/skogai/skogai-council.git",
+    "sha": "4afe31c6747fd5070a03b9d73087b1e267b24cb9"
   }
 ]

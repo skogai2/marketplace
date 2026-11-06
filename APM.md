@@ -28,7 +28,7 @@ apm reads the generator's `.claude-plugin/marketplace.json` from github as is (`
 | plugin | result |
 |---|---|
 | skogai-core | hooks broken: `events/*.sh` copied, the `../settings.sh` they source is not |
-| skogai-council | fails: it is a git submodule, so the github tree has no files at `plugins/skogai-council` |
+| skogai-council | failed as a git submodule; now an external entry in `external-repos.json`, not retested |
 | open-knowledge-plugin | installs; warns about hidden unicode in one file |
 | codex | installs; command frontmatter keys claude does not support are dropped |
 | loadout | installs |
