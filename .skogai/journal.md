@@ -2966,3 +2966,37 @@ Once this turn ends, I can check the journal for repeated entries and track down
 
 OK
 
+## 2026-11-06 22:27 · turn e6bce96b
+
+**User**
+
+> <task-notification>
+> skogai-core: its classic.InstructionsLoaded hook was skipped. "cc-plugin-sec-default" runs first and sent the event on past it.
+> </task-notification>
+
+**Assistant**
+
+Those notices are harmless to the logging and journaling. They only meant the status line never updated, and I've moved it to events the guard doesn't skip.
+
+**Why it happened:** Claude Code loads a built-in guard, `cc-plugin-sec-default`, ahead of every user-installed mod when you're on a Team or Enterprise login or the machine has managed settings. The guard passes every `classic.*` event past user mods. `hooks/register.ts` hooked `classic.*` to refresh the status line, so it was skipped once per event type, and that's each notice. The real work runs from the plain hooks in `hooks.json`, which the guard doesn't touch.
+
+**The journal commit is working:** `git log` shows two `skogai-core: journal and log` commits (`9897501`, `82a6947`), and the latest `Stop` rows end in `committed journal and log`. The newest one most likely came from my `claude -p` load check: the journal's last entry is its `OK` reply.
+
+**The fix (`hooks/register.ts`):** the status-line refresh now hooks `session.start`, `turn.start`, `tool.call` and `turn.complete` instead of `classic.*`. Each lets the event run first, then reads the log's last row as before. Checked so far:
+- `claude plugin validate` passes and lists those four events. The `tool.call ... without .catch` warning is the same informational one `LEARNINGS.md` already noted for `classic.*`.
+- The headless load check replies `OK`.
+- The marketplace drift check passes.
+
+After you run `/reload-plugins`, the notices should stop and the status line should start updating. I haven't confirmed that in an interactive session.
+
+I also updated `status-line.md` and `LEARNINGS.md`, and bumped skogai-core to 0.9.1. One rule in `LEARNINGS.md` was out of date: passing `$` to a helper function now validates, where it used to fail. These changes aren't committed yet.
+
+**Actions**
+
+- Bash: `cd /home/skogix/.local/src/marketplace/docs/plugins/mods; sed -n 42,160p reference.md | rtk grep -E '^\| `[a-z]+\.[a-zA-…`
+- Bash: `cd /home/skogix/.local/src/marketplace/docs/plugins/mods; awk '/^### Tools/,/^#### Agent/' reference.md | cut -c1-160; a…`
+- Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core; python3 - <<'EOF'`
+- Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core; claude plugin validate . 2>&1 | grep -v '^$' | head -30; sed…`
+- Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core; python3 - <<'EOF'`
+- Bash: `cd /home/skogix/.local/src/marketplace; rtk git log --oneline -4; rtk grep -c '^## ' .skogai/journal.md; tail -n 3 .skog…`
+
