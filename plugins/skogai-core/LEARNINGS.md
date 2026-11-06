@@ -8,7 +8,7 @@ Verified by running the validator against this mod, build 2.1.289.
 
 - **`on()` takes the event name as a string literal.** A variable (`on(stage, ...)`, looping over a list) fails with "the event name passed to on() is not a string literal". Every event must be written out.
 - **The hook must be a function literal.** `on('x', tap('x'))` fails because the hook is a call result. Use `on('x', async ($, e, next) => ...)`.
-- **`$` is only used as `$.noun.method(...)`.** Passing `$` to a helper fails. Passing `$.fs` as a value also fails. Calls such as `$.fs.read(...)` inside a closure are fine.
+- **`$` is only used as `$.noun.method(...)`.** Passing `$.fs` as a value fails. Passing `$` itself to a helper failed on 2.1.289 but passes on a later build (2026-11-06), which lists the helper's calls as `$.fs.read (via refresh)`. Calls such as `$.fs.read(...)` inside a closure are fine.
 - **Helpers are fine when they don't take `$`.** A module-level queue and a `lineFor(stage, e)` formatter both pass.
 - **Good output looks like:** `hooks: <events>` and `calls: $.fs.exists, $.fs.read, $.fs.write, $.ui.status`. The validator lists every event and call it found, which is the quickest way to confirm what a mod does.
 - **The `author` warning is harmless.** It appears when `plugin.json` has no author field.
@@ -42,6 +42,7 @@ The plugin started as a way to act upon what Claude Code calls hooks, and drifte
 - **Plain hooks avoid the `$.fs` problems.** The event JSON arrives on stdin, `>>` really appends, and `git rev-parse --show-toplevel` fixes the working-directory problem. No 4 MiB limit, no read-modify-write queue.
 - **`$.process.run` has no stdin,** only an argument list, and one Linux argument is capped at 128 KiB. That ruled out a mod that hands events to scripts as arguments.
 - **`prompt_id` ties a turn together.** `UserPromptSubmit`, `PostToolUse` and `Stop` all carry it, so `Stop.sh` finds the turn's prompt and tool uses with `grep -F "$prompt_id"` on the log. Subagent rows carry `agent_id` and are skipped.
+- **`classic.*` hooks are skipped where the built-in guard loads** (2026-11-06). `cc-plugin-sec-default` (see `docs/plugins/mods/admin.md`, loads on a Team/Enterprise login or with managed settings) passes every `classic.*` event past user-installed mods: one `skogai-core: its classic.Stop hook was skipped. "cc-plugin-sec-default" runs first and sent the event on past it.` notice per event. The plain hooks in `hooks.json` still run. Use native events (`turn.start`, `tool.call`, `turn.complete`, `session.start`) instead. The entries below about `classic.*` held before the guard loaded.
 - **`classic.*` lets a mod follow the plain hooks.** Awaiting `next(e)` before reading the log lets the plain hooks write their row first. Confirmed in an interactive session after `/reload-plugins`.
 - **The validator reports `gating hook without .catch: classic.*`.** It's informational. The hook catches its own errors and always returns `next`'s result.
 - **Headless check:** `claude -p` in a scratch repo, started from a subdirectory, logged `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` (with its action) and `SessionEnd`. The journal entry landed at the git root and was staged.

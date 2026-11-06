@@ -32,34 +32,57 @@ function setting(text: string, key: string): string | undefined {
   return undefined
 }
 
+// Shows the event of the log's last row in the status line. Errors are
+// swallowed: a status line is never worth failing the event over.
+async function refresh($: any): Promise<void> {
+  try {
+    if (root === null) {
+      const git = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
+      root = git.exitCode === 0 ? git.stdout.trim() : '.'
+    }
+    // Read on every event, so edits to the settings apply without a reload.
+    // dash's `skogai config` folds every layer, the settings file among
+    // them; without one that knows --file, read the file alone.
+    const path = `${root}/${SETTINGS}`
+    const config = await $.process.run(['skogai', 'config', 'list', '--file', path.replace(/\.local\.md$/, '.md'), '--scope', 'skogai-core']).catch(() => null)
+    let get: (key: string) => string | undefined
+    if (config !== null && config.exitCode === 0) {
+      get = key => resolved(config.stdout, key)
+    } else {
+      const text = (await $.fs.exists(path)) ? await $.fs.read(path) : ''
+      get = key => setting(text, key)
+    }
+    if (get('enabled') === 'false' || get('status-line') === 'false') return
+    // tail reads only the last row, so the log can grow past $.fs.read's 4 MiB.
+    const last = await $.process.run(['tail', '-n1', `${root}/${get('log-path') || LOG}`])
+    const event = JSON.parse(last.stdout).event
+    if (typeof event === 'string') $.ui.status('hook: ' + event)
+  } catch {}
+}
+
 export const register: Register = on => {
-  // classic.* matches every settings hook event (Stop, PreToolUse, ...).
-  on('classic.*', async ($, e, next) => {
-    // Let the plain hooks run, and write their row, before reading the log.
+  // Not classic.*: the built-in cc-plugin-sec-default guard passes settings
+  // hook events past user-installed mods, so a classic.* hook never runs.
+  // These native events fire around the same moments. Each passes the event
+  // on first, so the plain hooks have written their row before the read.
+  on('session.start', async ($, e, next) => {
     const result = await next(e)
-    try {
-      if (root === null) {
-        const git = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
-        root = git.exitCode === 0 ? git.stdout.trim() : '.'
-      }
-      // Read on every event, so edits to the settings apply without a reload.
-      // dash's `skogai config` folds every layer, the settings file among
-      // them; without one that knows --file, read the file alone.
-      const path = `${root}/${SETTINGS}`
-      const config = await $.process.run(['skogai', 'config', 'list', '--file', path.replace(/\.local\.md$/, '.md'), '--scope', 'skogai-core']).catch(() => null)
-      let get: (key: string) => string | undefined
-      if (config !== null && config.exitCode === 0) {
-        get = key => resolved(config.stdout, key)
-      } else {
-        const text = (await $.fs.exists(path)) ? await $.fs.read(path) : ''
-        get = key => setting(text, key)
-      }
-      if (get('enabled') === 'false' || get('status-line') === 'false') return result
-      // tail reads only the last row, so the log can grow past $.fs.read's 4 MiB.
-      const last = await $.process.run(['tail', '-n1', `${root}/${get('log-path') || LOG}`])
-      const event = JSON.parse(last.stdout).event
-      if (typeof event === 'string') $.ui.status('hook: ' + event)
-    } catch {}
+    await refresh($)
+    return result
+  })
+  on('turn.start', async ($, e, next) => {
+    const result = await next(e)
+    await refresh($)
+    return result
+  })
+  on('tool.call', async ($, e, next) => {
+    const result = await next(e)
+    await refresh($)
+    return result
+  })
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    await refresh($)
     return result
   })
 }

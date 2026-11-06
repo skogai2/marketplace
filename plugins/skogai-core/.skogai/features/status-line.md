@@ -8,7 +8,7 @@ skogai-core exists to act upon events. The status line shows which one we're act
 
 ## How
 
-The status line is the only part that is a mod, because only a mod can call `$.ui.status`. `hooks/register.ts` hooks `classic.*`, which fires for every plain hook event. It lets the plain hooks run first, then reads the last row of the log with `tail -n1` and shows its `event`. The log is the single source of truth; the status line is a view of its last row.
+The status line is the only part that is a mod, because only a mod can call `$.ui.status`. `hooks/register.ts` hooks `session.start`, `turn.start`, `tool.call` and `turn.complete` (not `classic.*`: the built-in `cc-plugin-sec-default` guard passes settings hook events past user-installed mods, so a `classic.*` hook is skipped every time). Each lets the event run first, then reads the last row of the log with `tail -n1` and shows its `event`. The log is the single source of truth; the status line is a view of its last row.
 
 ## Status
 
