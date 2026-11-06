@@ -19,7 +19,6 @@
   },
   {
     "source": "url",
-    "url": "https://github.com/skogai/skogai-council.git",
-    "sha": "4afe31c6747fd5070a03b9d73087b1e267b24cb9"
+    "url": "https://github.com/skogai/skogai-council.git"
   }
 ]
