@@ -2934,3 +2934,25 @@ Q5 asked the same thing, so it no longer needs an answer. It had already left th
 
 Q5's "not yet" agrees with Q4, so nothing changes: there's no Codex marketplace, and `APM.md` already records that. No questions are open now.
 
+## 2026-11-06 22:25 · turn 2ae54f6d
+
+**User**
+
+> <task-notification>
+> skogai-core: its classic.PostToolUse hook was skipped. "cc-plugin-sec-default" runs first and sent the event on past it.
+> </task-notification>
+
+**Assistant**
+
+Yes, they're running, though I haven't seen the new journal commit happen yet.
+
+- **Log:** `.skogai/logs/skogai-core/log.jsonl` is getting new rows for `PreToolUse` and `UserPromptSubmit`, each `UserPromptSubmit` ending in `wrote .skogai/tmp`.
+- **Journal commit:** it only runs on `Stop`, and no turn has ended since the reload. The latest commit is your `35725dc`, and the tree is clean. After this reply, `git log -1` should show `skogai-core: journal and log`.
+
+Two things look off:
+
+1. **Each prompt is logged three times.** Three `UserPromptSubmit` rows within about 400ms means skogai-core's hooks are probably loaded three times: maybe the marketplace install, a `--plugin-dir` copy and a cached older version. If so, each `Stop` also runs three times, giving three journal entries per turn. The second and third commits would find nothing new and do nothing, but the journal would still repeat. `/plugin` should show whether more than one skogai-core is installed.
+2. **"Hook skipped" notices:** Claude Code is reporting skogai-core's `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PermissionDenied` and `PostToolBatch` hooks as skipped, because the `cc-plugin-sec-default` plugin runs first and passes the event on. The log rows show at least one copy still ran. Most likely only some of the copies are being skipped, but I haven't confirmed that.
+
+Once this turn ends, I can check the journal for repeated entries and track down where the three copies are loaded from.
+
