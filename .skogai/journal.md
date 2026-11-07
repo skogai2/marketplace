@@ -3057,3 +3057,38 @@ Which do you want: a live browser page (I'd start there), a panel inside Claude 
 - Bash: `cd /home/skogix/.local/src/marketplace && sed -i 's/then commits only the journal and the log (on by default/then commit…`
 - Bash: `cd /home/skogix/.local/src/marketplace && rtk git add CLAUDE.md plugins/skogai-core/.skogai/features/diff-as-handover.md…`
 
+## 2026-11-07 23:01 · turn d43f222e
+
+**User**
+
+> 3. it means "they always run in order/are predictable so we know what will happen -> planning"
+>
+> and we will most likely continue with the "append to log"-thinking with literally every event we can think of wherever it is so some "tooling surrounding the log"/jsonl-parser or showing in a better way what we are working with for example will not hurt
+
+**Assistant**
+
+skogix, so "planning" means the hook order is fixed, which lets the dashboard draw the whole expected sequence before anything happens and light each step up as its row arrives. Here's how I'd build that, with the log tools first since they're useful whichever way the dashboard goes.
+
+**What the current log looks like** (1125 rows in this repo): mostly PreToolUse (431) and PostToolUse (385), plus 80 UserPromptSubmit and 67 Stop. Every row has the same shape: `ts`, `event`, an optional `action`, and the raw `input`. One row has `event: null`, so something already writes rows without a hook event name. That will happen more often once we log from places other than hooks.
+
+**Plan, in order:**
+
+1. **A shared row shape anyone can write.** We keep `ts`, `event`, `action?` and `input`, and add `source` (which hook script, `git-steps`, `register.ts`, or something outside the plugin) and an optional `checks: [{name, value, result}]`. `checks` records what a hook evaluated, not just what it did. `append-json.sh` becomes the one writer for anything that wants to log, hook or not, and `event-log.md` documents the shape.
+2. **A command for reading the log** (bash + jq, under `scripts/log/`, tested in `tests/run.sh`):
+   - `tail`: follow the log live, one readable line per row
+   - `turns`: rows grouped by session and turn (`prompt_id`)
+   - `filter`: by event, source, session or action
+   - `stats`: counts and how long things take
+3. **The planned flow.** `flow.json` writes down the order: SessionStart, then each turn (UserPromptSubmit, then any number of PreToolUse followed by PostToolUse or PostToolUseFailure, then Stop or StopFailure), then SessionEnd. Notification, Subagent* and Pre/PostCompact go on side branches. Each step lists what the hook will do under the current settings, for example: on Stop, journal yes, stage no, commit no. A `plan` subcommand prints this. It's the same data the dashboard draws.
+4. **The dashboard.** One HTML page plus a tiny local server that follows the log and pushes rows to the browser. The page draws the plan from step 3 as a lane per turn. Each step is shown as waiting, checked or acted, and you can click it to see the full row. I'd write the server in bun if you have it, otherwise Python with only its standard library.
+
+Each step is usable on its own: after step 2 you have better tools for the log, after step 3 the plan exists, and step 4 just draws them.
+
+Before I start:
+- **Go ahead for all four steps, or only steps 1 and 2 for now?**
+- Does the extra `source` and `checks` fields in step 1 match what you mean by logging "every event we can think of wherever it is"? Or do you have sources outside Claude Code in mind (git hooks, systemd, other agents)? That changes whether the log should stay per-repo or also get a global one.
+
+**Actions**
+
+- Bash: `rtk read hooks/hooks.json scripts/append-json.sh scripts/write-state.sh; rtk ls -a . .skogai .skogai/features; rtk wc -l…`
+
