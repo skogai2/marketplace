@@ -43,7 +43,7 @@ log="$repo/.skogai/logs/skogai-core/log.jsonl"
 check "log is at the git root, one row per event" \
   "UserPromptSubmit UserPromptSubmit PostToolUse PostToolUse PostToolUseFailure PostToolUse Stop" \
   "$(jq -r .event "$log" | paste -sd' ')"
-check "only Stop has an action" "journal entry, committed journal and log, git add -A, wrote .skogai/tmp" "$(jq -r '.action // empty' "$log")"
+check "only Stop has an action" "journal entry, committed journal, git add -A, wrote .skogai/tmp" "$(jq -r '.action // empty' "$log")"
 
 expected="## <ts> · turn 11111111
 
@@ -63,8 +63,8 @@ done
 - Read \`src/a.txt\` (failed)"
 check "journal entry at the git root" "$expected" \
   "$(sed -E '1s/^## .{16} ·/## <ts> ·/' "$repo/.skogai/journal.md")"
-check "journal and log are committed, nothing else" \
-  "$(printf '.skogai/journal.md\n.skogai/logs/skogai-core/log.jsonl')" \
+check "only the journal is committed, never the log" \
+  ".skogai/journal.md" \
   "$(git -C "$repo" show --name-only --format= HEAD)"
 check "work is staged, not committed" "src/a.txt" \
   "$(git -C "$repo" diff --cached --name-only | grep -v '^.skogai/logs/')"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop: append the turn to .skogai/journal.md at the git root, run the git
-# steps switched on for turn end (see git-steps.sh; the journal and the log are
-# committed unless SKOGAI_JOURNAL_ONSTOP=false), write the resulting state
+# steps switched on for turn end (see git-steps.sh; the journal is committed
+# unless SKOGAI_JOURNAL_ONSTOP=false; the log never is), write the resulting state
 # to .skogai/tmp/ (see write-state.sh), and log it. The prompt and the tool uses come
 # from this turn's rows in the log, matched by prompt_id.
 set -euo pipefail
@@ -56,6 +56,6 @@ jq -r --slurpfile rows <(turn_rows) --arg root "$root" \
   + (if ($actions | length) > 0 then ["**Actions**", ($actions | map("- " + .) | join("\n"))] else [] end)
   | join("\n\n") + "\n"' <<<"$input" >>"$journal"
 
-ran=$("$here/../git-steps.sh" STOP "$root" "$journal" "$log")
+ran=$("$here/../git-steps.sh" STOP "$root" "$journal")
 "$here/../write-state.sh" "$root"
 exec "$here/../append-json.sh" "journal entry${ran:+, $ran}, wrote .skogai/tmp" <<<"$input"

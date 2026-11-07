@@ -6,8 +6,7 @@
 # they map to, <EVENT> without its `_`). `journal` is on unless false, the
 # others are off unless true:
 #   journal.on-<event> SKOGAI_JOURNAL_ON<EVENT>  commit only the given paths
-#                      (the journal and the log; force-added, since the log
-#                      is gitignored), leaving the rest of the index alone
+#                      (the journal), leaving the rest of the index alone
 #   stage.on-<event>   SKOGAI_STAGE_ON<EVENT>    `git add -A`
 #   commit.on-<event>  SKOGAI_COMMIT_ON<EVENT>   `wt step commit` (skipped when the tree is clean)
 #   merge.on-<event>   SKOGAI_MERGE_ON<EVENT>    `wt merge --no-remove`
@@ -37,11 +36,11 @@ for path in "$@"; do
   [[ $path == "$root"/* && -e $path ]] && paths+=("${path#"$root"/}")
 done
 if [[ ${#paths[@]} -gt 0 && $(switch journal) != false ]]; then
-  git -C "$root" add -f -- "${paths[@]}"
+  git -C "$root" add -- "${paths[@]}"
   if git -C "$root" diff --cached --quiet -- "${paths[@]}"; then
     : # nothing new since the last commit
-  elif git -C "$root" commit -q --only -m "skogai-core: journal and log" -- "${paths[@]}" >&2; then
-    ran+=("committed journal and log")
+  elif git -C "$root" commit -q --only -m "skogai-core: journal" -- "${paths[@]}" >&2; then
+    ran+=("committed journal")
   else
     ran+=("journal commit (failed)")
   fi

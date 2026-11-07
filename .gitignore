@@ -4,3 +4,4 @@
 .claude/*.local.md
 /.skogai/tmp/git-diff
 
+/.skogai/logs/skogai-core/log.jsonl

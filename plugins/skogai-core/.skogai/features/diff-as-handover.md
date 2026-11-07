@@ -16,7 +16,7 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
   | Env (`<EVENT>` is `STOP` or `USERPROMPTSUBMIT`) | Runs |
   |---|---|
-  | `SKOGAI_JOURNAL_ON<EVENT>` | `git add -f` and `git commit --only` of `.skogai/journal.md` and the log (only on `Stop`, which passes those paths), skipped when they're unchanged |
+  | `SKOGAI_JOURNAL_ON<EVENT>` | `git add` and `git commit --only` of `.skogai/journal.md` (only on `Stop`, which passes that path; the log is never committed), skipped when they're unchanged |
   | `SKOGAI_STAGE_ON<EVENT>` | `git add -A` |
   | `SKOGAI_COMMIT_ON<EVENT>` | `wt step commit`, skipped when the tree is clean |
   | `SKOGAI_MERGE_ON<EVENT>` | `wt merge --no-remove` |
@@ -26,5 +26,5 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 ## Left out on purpose
 
-- No automatic commits of anything but the journal and the log unless switched on. The Stop row itself lands in the log after the commit, so it goes in with the next one.
+- No automatic commits of anything but the journal unless switched on. The log stays untracked (gitignored).
 - No mid-session diff injection.

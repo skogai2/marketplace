@@ -17,7 +17,7 @@ Claude Code plugin marketplace (`skogai-marketplace`). No build step. Tooling (`
 ## skogai-core (the one local plugin)
 
 - `hooks/hooks.json` maps each hook event to `scripts/events/<Event>.sh`. Each script logs a JSON row through `scripts/append-json.sh` to `.skogai/logs/skogai-core/log.jsonl` at the git root. `hooks/register.ts` is a function-hook module and only drives the status line.
-- `Stop.sh` appends the turn to `.skogai/journal.md`, then commits only the journal and the log (on by default; `SKOGAI_JOURNAL_ONSTOP=false` turns it off). The `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` vars turn on `git add -A` / `wt step commit` / `wt merge`; those default to off. Per-project settings: `.claude/skogai-core.local.md` (example in `examples/`, documented in `CONFIG.md`).
+- `Stop.sh` appends the turn to `.skogai/journal.md`, then commits only the journal, never the log (on by default; `SKOGAI_JOURNAL_ONSTOP=false` turns it off). The `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` vars turn on `git add -A` / `wt step commit` / `wt merge`; those default to off. Per-project settings: `.claude/skogai-core.local.md` (example in `examples/`, documented in `CONFIG.md`).
 - Tests: `plugins/skogai-core/tests/run.sh` feeds sample hook rows through the scripts in a throwaway git repo. There's no per-test selection. Needs `bash`, `jq`, `git`, `flock`.
 
 ## Validating
