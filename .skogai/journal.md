@@ -3000,3 +3000,60 @@ I also updated `status-line.md` and `LEARNINGS.md`, and bumped skogai-core to 0.
 - Bash: `cd /home/skogix/.local/src/marketplace/plugins/skogai-core; python3 - <<'EOF'`
 - Bash: `cd /home/skogix/.local/src/marketplace; rtk git log --oneline -4; rtk grep -c '^## ' .skogai/journal.md; tail -n 3 .skog…`
 
+## 2026-11-07 22:57 · turn a59b6f32
+
+**User**
+
+> hi claude. could we globally git-ignore the "log.jsonl" we create?
+>
+> next up is also a bigger request i guess?
+>
+>  i have asked for a design to be put together where "hooks are displayed visually in order as they check and then if invoked show the action". think "web-dashboard showing the flow and planning" etc but following the hooks and other "event/triggers" pretty much. 
+>
+> is this something we are set up for or is it a lot?
+
+**Assistant**
+
+skogix, the log is fixed and committed as `cf4c378`.
+
+**The log**
+
+It was already ignored globally: `~/.config/git/ignore` has `**/.skogai/logs/skogai-core/`, and the repo `.gitignore` has `.skogai/logs/`. It kept getting committed because `git-steps.sh` added it on every Stop with `git add -f`, which skips ignore rules.
+
+- Stop now commits only `.skogai/journal.md`, and the log stays untracked. Your staged deletion of `log.jsonl` went into the same commit.
+- I updated the test first and watched it fail, then made the fix. `tests/run.sh` passes now.
+- The docs that said "journal and log" (CLAUDE.md, README, `diff-as-handover.md`) now say "journal only".
+- Your staged `.gitignore` line went in too. It does nothing extra, because `.skogai/logs/` on line 1 already covers that path. You can drop it whenever.
+
+**The hook dashboard: we're mostly set up for it**
+
+The hard part is the data, and we already have it. Every event lands in `log.jsonl` as one row with a timestamp, the event name, the full hook input (including `prompt_id` and `session_id`) and an `action` field. A row with no action means the hook ran and did nothing. A row with an action means it did something. That gives you the timeline you described, grouped by turn through `prompt_id`.
+
+What's missing:
+1. **More detail on what each hook checked.** Right now a row only tells you whether something happened. If you want each hook's checks shown as steps (for example "SKOGAI_STAGE_ONSTOP=false, skipped"), `git-steps.sh` and the event scripts would have to log each switch they evaluate. This is small and stays inside what we already have.
+2. **A live view.** The simplest version is one HTML page plus a small local server that follows `log.jsonl` and pushes new rows to the browser as they're written. The page would show each turn as a column of hook events in order, each marked as checked, skipped or acted, with the action expanded. It's roughly an afternoon of work. A panel inside Claude Code next to the chat is also possible, built on the `register.ts` mechanism that runs the status line, but it's tighter and harder to debug.
+3. **Planning.** If "planning" means showing what *will* fire before it happens, that's new. It means reading `hooks.json` plus the settings and drawing the hook sequence, then lighting each one up as its row comes in. That's moderate work, and it's the part that makes it feel like a flow view rather than a log viewer.
+
+So it's not a lot. Items 1 and 2 are small. Item 3 is the real design work.
+
+Which do you want: a live browser page (I'd start there), a panel inside Claude Code, or the static planned flow with live highlights from the start? And who asked for the design? If someone already drew it up, point me at it before I build anything.
+
+**Actions**
+
+- Bash: `cd /home/skogix/.local/src/marketplace && rtk git diff --cached .gitignore; rtk read .gitignore; git config --global cor…`
+- Bash: `rtk read scripts/events/Stop.sh; rtk ls ~/.config/git/ 2>/dev/null; rtk read ~/.config/git/ignore 2>/dev/null`
+- Read `plugins/skogai-core/scripts/git-steps.sh`
+- Bash: `cd /home/skogix/.local/src/marketplace && grep -rn "journal and log\|and the log\|force-added\|add -f" --include=*.sh --…` (failed)
+- Bash: `cd /home/skogix/.local/src/marketplace && git grep -n -e "journal and log" -e "and the log" -e "force-added" -e "add -f"…`
+- Read `plugins/skogai-core/tests/run.sh`
+- Edit `plugins/skogai-core/tests/run.sh`
+- Edit `plugins/skogai-core/tests/run.sh`
+- Bash: `tests/run.sh 2>&1 | rtk grep -v '^ok'`
+- Edit `plugins/skogai-core/scripts/events/Stop.sh`
+- Edit `plugins/skogai-core/scripts/events/Stop.sh`
+- Edit `plugins/skogai-core/scripts/git-steps.sh`
+- Edit `plugins/skogai-core/scripts/git-steps.sh`
+- Bash: `tests/run.sh 2>&1 | rtk grep -v '^ok'`
+- Bash: `cd /home/skogix/.local/src/marketplace && sed -i 's/then commits only the journal and the log (on by default/then commit…`
+- Bash: `cd /home/skogix/.local/src/marketplace && rtk git add CLAUDE.md plugins/skogai-core/.skogai/features/diff-as-handover.md…`
+
