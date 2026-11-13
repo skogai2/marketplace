@@ -1,8 +1,94 @@
 {
   "name": "skogai-core",
-  "version": "0.9.1",
-  "description": "Acts upon Claude Code hook events with one script per event, logs each one to log.jsonl, journals and stages every turn, and shows the last logged event in the status line.",
+  "version": "0.10.0",
+  "description": "Acts upon Claude Code hook events with one script per event. Each part (event log, turn journal, diff state files, git steps, status line) is a mod setting, all off by default.",
   "author": {
     "name": "Emil Skogsund"
+  },
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "description": "Master switch. Off: no log, journal, state files, git steps or status line, whatever else is set.",
+      "default": false
+    },
+    "events": {
+      "type": "string",
+      "title": "Events to log",
+      "description": "Space-separated hook event names to log; globs work, such as Post*. * logs every event. The journal needs UserPromptSubmit and PostToolUse*.",
+      "default": "*"
+    },
+    "log_path": {
+      "type": "string",
+      "title": "Log path",
+      "description": "Event log file (JSON lines), relative to the git root or absolute.",
+      "default": ".skogai/logs/skogai-core/log.jsonl"
+    },
+    "journal": {
+      "type": "boolean",
+      "title": "Journal",
+      "description": "On Stop, append the turn (prompt, reply, tool uses) to the journal and commit only that file.",
+      "default": false
+    },
+    "journal_path": {
+      "type": "string",
+      "title": "Journal path",
+      "description": "Turn journal file, relative to the git root or absolute.",
+      "default": ".skogai/journal.md"
+    },
+    "write_state": {
+      "type": "boolean",
+      "title": "Write state files",
+      "description": "On SessionStart, UserPromptSubmit and Stop, write git-diff, git-diff-cached and wt-step-diff to the state directory.",
+      "default": false
+    },
+    "state_dir": {
+      "type": "string",
+      "title": "State directory",
+      "description": "Where the state files go, relative to the git root or absolute.",
+      "default": ".skogai/tmp"
+    },
+    "status_line": {
+      "type": "boolean",
+      "title": "Status line",
+      "description": "Show hook: <event> from the log's last row.",
+      "default": false
+    },
+    "stage_on_stop": {
+      "type": "boolean",
+      "title": "Stage on Stop",
+      "description": "git add -A when a turn ends.",
+      "default": false
+    },
+    "commit_on_stop": {
+      "type": "boolean",
+      "title": "Commit on Stop",
+      "description": "wt step commit when a turn ends.",
+      "default": false
+    },
+    "merge_on_stop": {
+      "type": "boolean",
+      "title": "Merge on Stop",
+      "description": "wt merge --no-remove when a turn ends.",
+      "default": false
+    },
+    "stage_on_prompt": {
+      "type": "boolean",
+      "title": "Stage on prompt",
+      "description": "git add -A when a prompt is submitted.",
+      "default": false
+    },
+    "commit_on_prompt": {
+      "type": "boolean",
+      "title": "Commit on prompt",
+      "description": "wt step commit when a prompt is submitted.",
+      "default": false
+    },
+    "merge_on_prompt": {
+      "type": "boolean",
+      "title": "Merge on prompt",
+      "description": "wt merge --no-remove when a prompt is submitted.",
+      "default": false
+    }
   }
 }

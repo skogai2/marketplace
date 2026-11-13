@@ -1,6 +1,6 @@
 # Config: one key space, two formats
 
-Status: **steps 1–4 built**, 5–6 open (see [Changes, in order](#changes-in-order)).
+Status: **not wired in.** skogai-core 0.10.0 reads mod settings (`userConfig`, see the README) instead; steps 3–4 below were removed from the code. Kept as the design for dash config.
 
 ## In one paragraph
 

@@ -17,5 +17,6 @@ The status line is the only part that is a mod, because only a mod can call `$.u
 
 ## Left out on purpose
 
+- Off unless the `enabled` and `status_line` mod settings are both on; otherwise the module registers no hooks at all.
 - Only the event name. Nothing else is shown.
 - No `$.fs.read` of the log, which would fail once it passes 4 MiB.

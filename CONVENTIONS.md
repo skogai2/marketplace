@@ -114,18 +114,17 @@ working directory, namespaced by plugin:
 These paths are gitignored. Never write runtime output into the plugin's own
 directory.
 
-## Per-Project Plugin Settings
+## Plugin Settings
 
-A plugin that needs user configuration reads it from
-`.claude/<plugin-name>.local.md`: YAML frontmatter for settings, with the
-markdown body for notes. These files are per-user and gitignored
-(`.claude/*.local.md`). A plugin must behave sensibly when its settings file
-is missing.
+A plugin that needs configuration declares it as mod settings: `userConfig`
+in its `plugin.json`, each option with a `default`. Claude Code stores the
+values in the user's `pluginConfigs` (user scope only, never per project),
+exports them to hooks as `CLAUDE_PLUGIN_OPTION_<KEY>` and passes them to a
+hooks module as `options`. Scripts fall back to the same defaults when the
+variable is unset, so they also run outside Claude Code.
 
 skogai-core is the reference implementation: `plugins/skogai-core/scripts/settings.sh`
-reads the file (through `skogai config` when available), `examples/skogai-core.local.md`
-is the template, `scripts/validate-settings.sh` checks it, and `CONFIG.md`
-explains how it layers with dash's `skogai config`.
+reads the options, and the plugin's README lists them.
 
 ## Adding a Plugin
 

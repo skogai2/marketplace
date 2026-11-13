@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Appends one row to the event log for an event we acted upon.
-# Skips the row when the settings (see settings.sh) switch the plugin off or
-# leave the event out of `events`.
+# Skips the row when the mod settings (see settings.sh) switch the plugin off
+# or leave the event out of `events`.
 # Usage: <hook stdin json> | append-json.sh [what we did]
 set -euo pipefail
 

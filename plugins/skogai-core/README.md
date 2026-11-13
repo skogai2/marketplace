@@ -3,8 +3,10 @@
 A Claude Code plugin for acting upon hook events. Each event we act upon has its own script, every action is logged, and the status line shows the event being acted upon. What it does and why is in [FEATURES.md](FEATURES.md):
 
 - **Event log:** one JSON row per event we act upon in `.skogai/logs/skogai-core/log.jsonl` at the git root.
-- **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root. The journal is then committed on its own (other work and the log are left alone); `SKOGAI_JOURNAL_ONSTOP=false` turns that off. `SKOGAI_{STAGE,COMMIT,MERGE}_ON_{STOP,USER_PROMPT_SUBMIT}` switch on `git add -A`, `wt step commit` and `wt merge`; those are off unless set to `true`.
+- **Diff as handover:** on `Stop`, appends the turn (prompt, reply, tool uses) to `.skogai/journal.md` at the git root and commits only that file (other work and the log are left alone). Optional git steps run `git add -A`, `wt step commit` and `wt merge`.
 - **Status line:** shows `hook: <event>` from the log's last row.
+
+All of it is off until switched on in the [settings](#settings).
 
 ## Installing it
 
@@ -39,23 +41,23 @@ tail -f .skogai/logs/skogai-core/log.jsonl | jq -c '{event, action}'
 
 ## Settings
 
-Per project, in `.claude/skogai-core.local.md` at the git root (gitignored). Start from the example and check it:
-
-```sh
-cp plugins/skogai-core/examples/skogai-core.local.md .claude/
-plugins/skogai-core/scripts/validate-settings.sh
-```
+Mod settings (`userConfig` in `.claude-plugin/plugin.json`). Set them with `/plugin configure skogai-core@skogai-marketplace` or in `/config`; they're stored under `pluginConfigs` in `~/.claude/settings.json`, so they apply to every project. Hooks read them from `CLAUDE_PLUGIN_OPTION_<KEY>` (through `scripts/settings.sh`), the status-line module from `options`. Run `/reload-plugins` after a change.
 
 | Key | Default | What it does |
 |---|---|---|
-| `enabled` | `true` | `false` switches everything off: log, journal, git steps, status line |
-| `events` | all | Hook events to log, as a list; globs such as `"Post*"` work. The journal needs `UserPromptSubmit` and `PostToolUse*` |
-| `log-path` | `.skogai/logs/skogai-core/log.jsonl` | Where the log goes, relative to the git root |
-| `status-line` | `true` | `false` hides `hook: <event>` |
+| `enabled` | `false` | Master switch. Off: nothing is logged, journaled, written or run |
+| `events` | `*` | Hook events to log, space-separated; globs such as `Post*` work. The journal needs `UserPromptSubmit` and `PostToolUse*` |
+| `log_path` | `.skogai/logs/skogai-core/log.jsonl` | Event log, relative to the git root or absolute |
+| `journal` | `false` | On `Stop`, append the turn to the journal and commit only that file |
+| `journal_path` | `.skogai/journal.md` | Turn journal, relative to the git root or absolute |
+| `write_state` | `false` | Write `git-diff`, `git-diff-cached` and `wt-step-diff` on `SessionStart`, `UserPromptSubmit` and `Stop` |
+| `state_dir` | `.skogai/tmp` | Where the state files go |
+| `status_line` | `false` | Show `hook: <event>` from the log's last row |
+| `stage_on_stop` / `stage_on_prompt` | `false` | `git add -A` at turn end / on prompt submit |
+| `commit_on_stop` / `commit_on_prompt` | `false` | `wt step commit`, skipped when the tree is clean |
+| `merge_on_stop` / `merge_on_prompt` | `false` | `wt merge --no-remove` |
 
-Keys may also be written with `_` (`log_path`). Scripts read the file on every event and so does the status line, so edits apply without a restart.
-
-With dash's `skogai config` on PATH (one that knows `--file`), the file is one layer of it: the same keys can come from `~/.skogai/config` or a repo's `.skogai/config` as `skogai-core.<key>`, or from env as `SKOGAI_SKOGAICORE_<KEY>`. `skogai config list --show-origin --file .claude/skogai-core.md --scope skogai-core` shows where each value came from. Without it, only the file is read. The git-step switches are unscoped keys (`stage.on-stop`, ...), see [diff as handover](.skogai/features/diff-as-handover.md).
+Loaded with `--plugin-dir`, the plugin has no configure dialog; set the values under `pluginConfigs["skogai-core@inline"].options` in `~/.claude/settings.json`.
 
 ## Files
 
@@ -65,11 +67,9 @@ hooks/hooks.json             the events we act upon, plus the status-line module
 hooks/register.ts            the status-line mod: shows the log's last event
 scripts/events/<Event>.sh    one script per event, run with the event's JSON on stdin
 scripts/append-json.sh       appends one row to the log: <json> | append-json.sh [action]
-scripts/git-steps.sh         runs the switched-on git steps: git-steps.sh <EVENT> <root>
-scripts/write-state.sh       writes git-diff, git-diff-cached, wt-step-diff to .skogai/tmp/
-scripts/settings.sh          sourced by the scripts: reads .claude/skogai-core.local.md
-scripts/validate-settings.sh checks a settings file: validate-settings.sh [path]
-examples/skogai-core.local.md  settings to copy into a project
+scripts/git-steps.sh         runs the switched-on git steps: git-steps.sh <stop|prompt> <root> [path...]
+scripts/write-state.sh       writes git-diff, git-diff-cached, wt-step-diff: write-state.sh <root> <dir>
+scripts/settings.sh          sourced by the scripts: reads the mod settings
 tests/run.sh                 tests the scripts in a throwaway git repo
 ```
 
@@ -86,7 +86,7 @@ A script can also answer back the way any command hook can, with exit code 2 or 
 
 ## Config
 
-Reading settings through dash's `skogai config`, with frontmatter files as extra layers, is proposed in [CONFIG.md](CONFIG.md).
+[CONFIG.md](CONFIG.md) is the earlier design for reading settings through dash's `skogai config`. It is not wired in; the mod settings above replaced it.
 
 ## Learnings
 

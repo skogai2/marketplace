@@ -10,19 +10,19 @@ Each turn leaves the working tree in a state where `git diff --cached` plus the 
 
 ## Status
 
-- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 2 only runs with `SKOGAI_STAGE_ONSTOP=true`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
+- Steps 1 and 2 are built: `scripts/events/Stop.sh` runs them on `Stop`, at the git root. Step 1 runs with the `journal` mod setting on, step 2 with `stage_on_stop`. It finds the turn's prompt and tool uses in the event log by `prompt_id`, and the reply in `last_assistant_message`.
 - `Stop` doesn't fire on an interrupted turn, so interrupted turns aren't journaled. The entry holds Claude's final message only, not text from earlier in the turn.
-- Git steps are switched by dash's `skogai config` keys (`stage.on-stop`, ...), read by `scripts/git-steps.sh` from the git root, so `.skogai/config` and `~/.skogai/config` apply. Each key's env var overrides it, and without a working `skogai` on PATH the env vars are all there is. `journal` is on unless `false`, the rest are off unless `true`, and they run in table order:
+- Git steps are mod settings (see the README's settings table), all off by default, and run in table order (`<event>` is `stop` or `prompt`):
 
-  | Env (`<EVENT>` is `STOP` or `USERPROMPTSUBMIT`) | Runs |
+  | Setting | Runs |
   |---|---|
-  | `SKOGAI_JOURNAL_ON<EVENT>` | `git add` and `git commit --only` of `.skogai/journal.md` (only on `Stop`, which passes that path; the log is never committed), skipped when they're unchanged |
-  | `SKOGAI_STAGE_ON<EVENT>` | `git add -A` |
-  | `SKOGAI_COMMIT_ON<EVENT>` | `wt step commit`, skipped when the tree is clean |
-  | `SKOGAI_MERGE_ON<EVENT>` | `wt merge --no-remove` |
+  | `journal` | `git add` and `git commit --only` of the journal (only on `Stop`; the log is never committed), skipped when it's unchanged |
+  | `stage_on_<event>` | `git add -A` |
+  | `commit_on_<event>` | `wt step commit`, skipped when the tree is clean |
+  | `merge_on_<event>` | `wt merge --no-remove` |
 
   A failed `wt` step is logged with `(failed)` and doesn't fail the hook.
-- Step 3 is half built: `scripts/write-state.sh` overwrites the three files on `SessionStart`, and on `UserPromptSubmit` and `Stop` after the git steps. `.skogai/tmp/` holds a `.gitignore` of `*`, so staging never picks the files up. Without `wt`, `wt-step-diff` is left empty. Nothing feeds the files into context yet.
+- Step 3 is half built: with `write_state` on, `scripts/write-state.sh` overwrites the three files on `SessionStart`, and on `UserPromptSubmit` and `Stop` after the git steps. `.skogai/tmp/` holds a `.gitignore` of `*`, so staging never picks the files up. Without `wt`, `wt-step-diff` is left empty. Nothing feeds the files into context yet.
 
 ## Left out on purpose
 
